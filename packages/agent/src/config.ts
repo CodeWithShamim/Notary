@@ -72,7 +72,9 @@ export const config = {
   poolDeadlineMs: int('POOL_DEADLINE_MS', 24 * HOUR),
 
   // api ------------------------------------------------------------------------------
-  apiPort: int('API_PORT', 8787),
+  // Railway (and most PaaS) inject the listen port as PORT; honour it, but let
+  // an explicit API_PORT win for local/multi-service setups.
+  apiPort: int('API_PORT', int('PORT', 8787)),
   apiHost: process.env.API_HOST ?? '0.0.0.0',
 
   // ops ---------------------------------------------------------------------

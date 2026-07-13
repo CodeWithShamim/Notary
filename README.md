@@ -1,7 +1,7 @@
-# ⚖ Notary — autonomous escrow & arbitration on Unicity
+# Notary ⚖ autonomous escrow & arbitration on Unicity
 
 **Notary is a trusted third party for the machine economy.** Two parties who
-don't trust each other — humans, or other agents — hire `@notary` to hold funds
+don't trust each other - humans, or other agents — hire `@notary` to hold funds
 and settle a deal for a 1% fee. The agent is discovered on the Unicity
 signed-intent market, spoken to over NIP-17 encrypted DMs with a documented JSON
 protocol, funded via payment requests, and it settles every deal **by itself**:
@@ -12,7 +12,7 @@ The **web app** is the human on-ramp. A visitor gets a real client-side Unicity
 wallet (keys never leave the browser), registers a nametag, self-mints test
 tokens, opens a deal, funds escrow with one click when the agent's payment
 request arrives, and watches settlement happen live. Crucially, humans only ever
-*express intent* — **the agent alone initiates and completes every settlement
+_express intent_ — **the agent alone initiates and completes every settlement
 transfer.** Nobody, including the operator, holds a "release" button.
 
 Runs on Unicity **testnet2** (the v2 state-transition gateway) via the
@@ -97,7 +97,7 @@ npm run dev:web
 > **Nametag collision on a shared network:** `@notary` is first-come-first-served
 > and bound to a pubkey. If someone already registered it on testnet2, set
 > `NOTARY_NAMETAG=notary-<something>` in `.env` (and `VITE_NOTARY_TAG` to match)
-> so your agent and web app talk to *your* instance.
+> so your agent and web app talk to _your_ instance.
 
 ### Tests & typecheck
 
@@ -138,12 +138,12 @@ issued on its own; `demo:pool` ends with the recipient receiving pot − 1% fee.
 All three flows and the full browser path were run end-to-end against the
 testnet2 gateway during development — real tokens minted and moved:
 
-| Flow | Result |
-|---|---|
-| Two-party escrow | `PROPOSED → AWAITING_FUNDS → FUNDED → DELIVERED_CLAIMED → RELEASED`; seller received **99000** base units, notary retained **1000** (1%). Seller balance `0 → 99000` confirmed. |
-| Timeout refund | Escrow funded, seller ghosted a 3-minute window; the agent **autonomously refunded** the buyer **50000** in full. Buyer balance `50000 → 100000` confirmed. |
-| Group pool | `!pool create → 3 × join/fund → payout`; pot **60000**, recipient received **59400**, notary retained **600** (1%). Recipient balance `20000 → 79400` confirmed. |
-| Browser wallet | Create → forced mnemonic backup → nametag registration → self-mint 100 UCT — all in headless Chrome, no page errors. |
+| Flow                | Result                                                                                                                                                                                            |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Two-party escrow    | `PROPOSED → AWAITING_FUNDS → FUNDED → DELIVERED_CLAIMED → RELEASED`; seller received **99000** base units, notary retained **1000** (1%). Seller balance `0 → 99000` confirmed.                   |
+| Timeout refund      | Escrow funded, seller ghosted a 3-minute window; the agent **autonomously refunded** the buyer **50000** in full. Buyer balance `50000 → 100000` confirmed.                                       |
+| Group pool          | `!pool create → 3 × join/fund → payout`; pot **60000**, recipient received **59400**, notary retained **600** (1%). Recipient balance `20000 → 79400` confirmed.                                  |
+| Browser wallet      | Create → forced mnemonic backup → nametag registration → self-mint 100 UCT — all in headless Chrome, no page errors.                                                                              |
 | Browser deal + fund | Buyer opened a deal from the UI → counterparty accepted → the **"Fund escrow" card** appeared from the agent's payment request → one click paid it → deal reached **FUNDED** live in the browser. |
 
 The agent's `/api/status` reflects this history (deals by state, escrow volume,
@@ -156,18 +156,18 @@ treasury, pools).
 Send JSON as an encrypted NIP-17 DM to `@notary`. Machine-readable at
 `GET /api/protocol`. Any non-JSON DM gets a plain-text `help` reply.
 
-| Message | Direction | Fields |
-|---|---|---|
-| `deal.open` | buyer → notary | `seller`, `amount` (base-unit string), `coinId` (hex or symbol), `deliverable`, `deliveryHours?` |
-| `deal.invite` | notary → seller | `dealId`, `buyer`, `seller`, `amount`, `coinId`, `deliverable`, `deliveryHours`, `feeBps`, `acceptBy` |
-| `deal.accept` | seller → notary | `dealId` |
-| `deal.reject` | seller → notary | `dealId`, `reason?` |
-| `deal.delivered` | seller → notary | `dealId`, `proof?` |
-| `deal.confirm` | buyer → notary | `dealId` |
-| `deal.dispute` | buyer → notary | `dealId`, `reason?` |
-| `deal.status` | party → notary | `dealId` |
-| `deal.update` | notary → parties | `deal` (full snapshot — the web app's live channel) |
-| `error` | notary → sender | `code`, `message`, `dealId?` |
+| Message          | Direction        | Fields                                                                                                |
+| ---------------- | ---------------- | ----------------------------------------------------------------------------------------------------- |
+| `deal.open`      | buyer → notary   | `seller`, `amount` (base-unit string), `coinId` (hex or symbol), `deliverable`, `deliveryHours?`      |
+| `deal.invite`    | notary → seller  | `dealId`, `buyer`, `seller`, `amount`, `coinId`, `deliverable`, `deliveryHours`, `feeBps`, `acceptBy` |
+| `deal.accept`    | seller → notary  | `dealId`                                                                                              |
+| `deal.reject`    | seller → notary  | `dealId`, `reason?`                                                                                   |
+| `deal.delivered` | seller → notary  | `dealId`, `proof?`                                                                                    |
+| `deal.confirm`   | buyer → notary   | `dealId`                                                                                              |
+| `deal.dispute`   | buyer → notary   | `dealId`, `reason?`                                                                                   |
+| `deal.status`    | party → notary   | `dealId`                                                                                              |
+| `deal.update`    | notary → parties | `deal` (full snapshot — the web app's live channel)                                                   |
+| `error`          | notary → sender  | `code`, `message`, `dealId?`                                                                          |
 
 ### Deal state machine
 
@@ -201,20 +201,20 @@ Partial pools auto-refund at the deadline.
 
 ## Configuration (agent `.env`)
 
-| Var | Default | Meaning |
-|---|---|---|
-| `UNICITY_API_KEY` | *(public testnet2 key)* | Gateway key. testnet2 key is **not** a secret; a mainnet key would be. |
-| `NOTARY_NAMETAG` | `notary` | The agent's nametag (must be free on the network). |
-| `WALLET_MNEMONIC` | *(unset)* | Pin a fixed identity; otherwise persisted in `DATA_DIR`. |
-| `DATA_DIR` / `DB_PATH` | `./wallet-data` / `./notary.db` | Wallet + SQLite persistence. |
-| `FEE_BPS` / `DISPUTE_FEE_BPS` | `100` / `50` | Escrow fee / retained dispute fee (basis points). |
-| `MIN_ESCROW` / `MAX_ESCROW` | `1` / `1e15` | Escrow bounds (base units). |
-| `ACCEPT_/FUNDING_/CONFIRM_TIMEOUT_MS` | 1h / 24h / 48h | Deal timers. |
-| `DEFAULT_DELIVERY_HOURS` | `72` | Delivery window when the buyer omits one. |
-| `TREASURY_FLOOR` / `TREASURY_MINT_AMOUNT` | `1000` / `100000` | Self-mint trigger + amount. |
-| `TREASURY_THRESHOLD` / `PREFERRED_COIN` | `10000` / `UCT` | Rebalance non-preferred coin above threshold. |
-| `TREASURY_AUTO_SWAP` | `false` | SDK P2P swaps need the experimental accounting module (see NOTES §5). |
-| `API_PORT` | `8787` | Read-only API port. |
+| Var                                       | Default                         | Meaning                                                                |
+| ----------------------------------------- | ------------------------------- | ---------------------------------------------------------------------- |
+| `UNICITY_API_KEY`                         | _(public testnet2 key)_         | Gateway key. testnet2 key is **not** a secret; a mainnet key would be. |
+| `NOTARY_NAMETAG`                          | `notary`                        | The agent's nametag (must be free on the network).                     |
+| `WALLET_MNEMONIC`                         | _(unset)_                       | Pin a fixed identity; otherwise persisted in `DATA_DIR`.               |
+| `DATA_DIR` / `DB_PATH`                    | `./wallet-data` / `./notary.db` | Wallet + SQLite persistence.                                           |
+| `FEE_BPS` / `DISPUTE_FEE_BPS`             | `100` / `50`                    | Escrow fee / retained dispute fee (basis points).                      |
+| `MIN_ESCROW` / `MAX_ESCROW`               | `1` / `1e15`                    | Escrow bounds (base units).                                            |
+| `ACCEPT_/FUNDING_/CONFIRM_TIMEOUT_MS`     | 1h / 24h / 48h                  | Deal timers.                                                           |
+| `DEFAULT_DELIVERY_HOURS`                  | `72`                            | Delivery window when the buyer omits one.                              |
+| `TREASURY_FLOOR` / `TREASURY_MINT_AMOUNT` | `1000` / `100000`               | Self-mint trigger + amount.                                            |
+| `TREASURY_THRESHOLD` / `PREFERRED_COIN`   | `10000` / `UCT`                 | Rebalance non-preferred coin above threshold.                          |
+| `TREASURY_AUTO_SWAP`                      | `false`                         | SDK P2P swaps need the experimental accounting module (see NOTES §5).  |
+| `API_PORT`                                | `8787`                          | Read-only API port.                                                    |
 
 Web app env (`VITE_*`): `VITE_UNICITY_API_KEY`, `VITE_NOTARY_TAG`, `VITE_AGENT_API`.
 
@@ -246,8 +246,4 @@ Web app env (`VITE_*`): `VITE_UNICITY_API_KEY`, `VITE_NOTARY_TAG`, `VITE_AGENT_A
   Vercel / Netlify / any static host. Set `VITE_*` at build time; point
   `VITE_AGENT_API` at the deployed agent's API URL.
 
-See [NOTES.md](./NOTES.md) for every place the implementation adapts to the real
-SDK API, and [SUBMISSION.md](./SUBMISSION.md) for the campaign write-up.
-
 MIT.
-# Notary
