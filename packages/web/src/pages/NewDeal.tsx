@@ -1,0 +1,128 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { parseTokenAmount } from '@unicitylabs/sphere-sdk';
+import { dmNotary } from '../lib/notary.js';
+import { humanError, uctCoinId } from '../lib/sphere.js';
+import { useWallet } from '../state/WalletContext.js';
+import { NametagModal } from '../components/NametagModal.js';
+
+export function NewDeal() {
+  const { nametag, assets } = useWallet();
+  const nav = useNavigate();
+  const [seller, setSeller] = useState('');
+  const [amount, setAmount] = useState('');
+  const [coin, setCoin] = useState('UCT');
+  const [deliverable, setDeliverable] = useState('');
+  const [hours, setHours] = useState('72');
+  const [sending, setSending] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [sentPayload, setSentPayload] = useState<string | null>(null);
+  const [showTag, setShowTag] = useState(false);
+
+  const coins = assets.length ? assets : [];
+  const selected = coins.find((a) => a.symbol === coin);
+  const decimals = selected?.decimals ?? 18;
+
+  if (!nametag) {
+    return (
+      <div className="card" style={{ maxWidth: 560 }}>
+        <h2>One thing first: a nametag</h2>
+        <p className="muted">
+          Deals pay out to nametags — the notary refunds buyers at theirs. You need one before opening a deal.
+        </p>
+        <button className="btn" onClick={() => setShowTag(true)}>Register a nametag</button>
+        {showTag && <NametagModal onClose={() => setShowTag(false)} />}
+      </div>
+    );
+  }
+
+  if (sentPayload) {
+    return (
+      <div className="card" style={{ maxWidth: 640 }}>
+        <h2>Deal proposed ✓</h2>
+        <p className="muted">
+          This exact message was DM'd (NIP-17 encrypted) to @notary — full transparency, no hidden API:
+        </p>
+        <pre className="json">{JSON.stringify(JSON.parse(sentPayload), null, 2)}</pre>
+        <p className="muted">
+          The notary is inviting the seller now. Watch it appear under <b>My deals</b> — when the seller
+          accepts, a payment request will land here for you to fund the escrow.
+        </p>
+        <button className="btn" onClick={() => nav('/deals')}>Go to my deals</button>
+      </div>
+    );
+  }
+
+  const submit = async () => {
+    setSending(true);
+    setErr(null);
+    try {
+      let baseUnits: bigint;
+      try {
+        baseUnits = parseTokenAmount(amount.trim(), decimals);
+      } catch {
+        throw new Error(`"${amount}" is not a valid ${coin} amount.`);
+      }
+      if (baseUnits <= 0n) throw new Error('Amount must be positive.');
+      const payload = await dmNotary({
+        v: 1,
+        type: 'deal.open',
+        seller: seller.trim().replace(/^@/, ''),
+        amount: baseUnits.toString(),
+        coinId: selected?.coinId ?? (coin === 'UCT' ? uctCoinId() : coin),
+        deliverable: deliverable.trim(),
+        deliveryHours: Number(hours) || 72,
+      });
+      setSentPayload(payload);
+    } catch (e) {
+      setErr(humanError(e));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const valid = seller.trim().length >= 3 && amount.trim() !== '' && deliverable.trim().length > 0;
+
+  return (
+    <div style={{ maxWidth: 640 }}>
+      <h1>Open a deal</h1>
+      <p className="sub">
+        You're the buyer. The notary invites the seller; once they accept you'll get a payment request to fund
+        the escrow. Fee: 1% of the escrow, paid from the release.
+      </p>
+      <div className="card">
+        <label className="field">
+          <span>Seller's nametag</span>
+          <input value={seller} onChange={(e) => setSeller(e.target.value)} placeholder="@bob" />
+        </label>
+        <div className="grid2">
+          <label className="field">
+            <span>Amount ({coin})</span>
+            <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.0001" inputMode="decimal" />
+          </label>
+          <label className="field">
+            <span>Coin</span>
+            <select value={coin} onChange={(e) => setCoin(e.target.value)}>
+              {coins.length === 0 && <option value="UCT">UCT</option>}
+              {coins.map((a) => (
+                <option key={a.coinId} value={a.symbol}>{a.symbol}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <label className="field">
+          <span>What is being delivered?</span>
+          <textarea value={deliverable} onChange={(e) => setDeliverable(e.target.value)} placeholder="Logo design — 3 concepts, source files included" />
+        </label>
+        <label className="field">
+          <span>Delivery window (hours after funding)</span>
+          <input value={hours} onChange={(e) => setHours(e.target.value)} inputMode="numeric" />
+        </label>
+        {err && <p className="error-text">{err}</p>}
+        <button className="btn" disabled={!valid || sending} onClick={() => void submit()}>
+          {sending ? <span className="spinner" /> : 'Propose deal to @notary'}
+        </button>
+      </div>
+    </div>
+  );
+}
