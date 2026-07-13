@@ -1,3 +1,5 @@
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import Database from 'better-sqlite3';
 import type { DealState } from '@notary/shared';
 
@@ -69,6 +71,9 @@ export class Store {
   readonly db: Database.Database;
 
   constructor(path: string) {
+    // better-sqlite3 won't create parent dirs; on a fresh volume (Railway,
+    // Docker) DB_PATH's directory may not exist yet, so ensure it.
+    if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
     this.db = new Database(path);
     this.db.pragma('journal_mode = WAL');
     this.db.pragma('foreign_keys = ON');
