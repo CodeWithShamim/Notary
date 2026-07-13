@@ -1,0 +1,29 @@
+{
+  "name": "@notary/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@notary/shared": "*",
+    "@tanstack/react-query": "^5.62.0",
+    "@unicitylabs/sphere-sdk": "^0.11.9",
+    "buffer": "^6.0.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0"
+  }
+}
