@@ -1,0 +1,21 @@
+node_modules/
+dist/
+*.log
+
+# agent runtime state (wallet identity, deals, tokens) — never commit
+packages/agent/wallet-data/
+packages/agent/tokens/
+packages/agent/*.db
+packages/agent/*.db-wal
+packages/agent/*.db-shm
+packages/agent/.demo/
+
+# local env
+.env
+packages/*/.env
+!.env.example
+
+# editor / OS
+.DS_Store
+.vscode/
+.idea/

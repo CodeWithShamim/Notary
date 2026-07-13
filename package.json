@@ -1,0 +1,28 @@
+{
+  "name": "notary",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Notary — autonomous escrow & arbitration agent + web on-ramp on Unicity Sphere (testnet2)",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "packages/shared",
+    "packages/agent",
+    "packages/web"
+  ],
+  "scripts": {
+    "build": "npm run build -w @notary/shared && npm run build -w @notary/agent && npm run build -w @notary/web",
+    "test": "npm run test -w @notary/shared && npm run test -w @notary/agent",
+    "dev:agent": "npm run dev -w @notary/agent",
+    "dev:web": "npm run dev -w @notary/web",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "allowScripts": {
+    "better-sqlite3@12.11.1": true,
+    "esbuild@0.28.1": true,
+    "esbuild@0.25.12": true,
+    "fsevents@2.3.3": true
+  }
+}
