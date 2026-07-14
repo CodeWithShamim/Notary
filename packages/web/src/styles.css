@@ -245,6 +245,12 @@ textarea { resize: vertical; min-height: 80px; }
   padding: 6px 12px; font-size: 13px; display: flex; align-items: center; gap: 8px;
 }
 .wallet-chip .bal { color: var(--gold); font-weight: 600; }
+.wallet-nametag {
+  position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  background: var(--ink-2); border: 1px solid var(--line-strong); border-radius: 6px;
+  padding: 4px 10px; font-size: 12px; color: var(--gold); white-space: nowrap;
+  z-index: 20; pointer-events: none; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
 
 /* payment request card */
 .pay-card {

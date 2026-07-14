@@ -54,7 +54,9 @@ export function WalletWidget() {
       <div
         className="wallet-chip"
         title={`${address ?? ''}${transport ? ` · via ${transport}` : ''}`}
-        style={{ cursor: 'pointer' }}
+        style={{ cursor: 'pointer', position: 'relative' }}
+        onMouseEnter={() => setHovering(true)}
+        onMouseLeave={() => setHovering(false)}
         onClick={() => {
           if (address) {
             void navigator.clipboard.writeText(address);
@@ -64,8 +66,8 @@ export function WalletWidget() {
         }}
       >
         <span className="mono">{copied ? 'copied ✓' : shortAddr(address)}</span>
+        {nametag && hovering && <span className="wallet-nametag">@{nametag}</span>}
       </div>
-      {nametag && <div className="wallet-chip">@{nametag}</div>}
       <div className="wallet-chip">
         <span className="bal">{uct ? human(uct.totalAmount, uct.decimals) : '0'}</span> UCT
       </div>
