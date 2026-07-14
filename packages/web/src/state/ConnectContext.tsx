@@ -17,7 +17,9 @@ import {
   disconnect as disconnectWallet,
   fetchAssets,
   getConnectClient,
+  isAutoConnectEnabled,
   sendIntent,
+  setAutoConnectEnabled,
   type ConnectAsset,
 } from '../lib/connect.js';
 import { NOTARY_TAG } from '../lib/sphere.js';
@@ -73,6 +75,9 @@ interface ConnectState {
   deals: Record<string, StoredDeal>;
   permissions: readonly string[];
   transport: string | null;
+  /** Whether the app silently restores an approved session on load. */
+  autoConnect: boolean;
+  setAutoConnect: (enabled: boolean) => void;
   /** Interactive connect — opens the wallet's approval UI. */
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
@@ -111,7 +116,13 @@ export function ConnectProvider({ children }: { children: ReactNode }) {
   const [deals, setDeals] = useState<Record<string, StoredDeal>>({});
   const [permissions, setPermissions] = useState<readonly string[]>([]);
   const [transport, setTransport] = useState<string | null>(null);
+  const [autoConnect, setAutoConnectState] = useState<boolean>(isAutoConnectEnabled);
   const unwire = useRef<(() => void) | null>(null);
+
+  const setAutoConnect = useCallback((enabled: boolean) => {
+    setAutoConnectEnabled(enabled);
+    setAutoConnectState(enabled);
+  }, []);
 
   const refreshAssets = useCallback(async () => {
     const client = getConnectClient();
@@ -208,10 +219,11 @@ export function ConnectProvider({ children }: { children: ReactNode }) {
     [wire, refreshAssets, refreshDeals],
   );
 
-  // Silent auto-connect on load (iframe / extension only — popup would open a window).
+  // Silent auto-connect on load, when enabled (iframe / extension only — popup
+  // would open a window).
   useEffect(() => {
     let cancelled = false;
-    if (canAutoConnectSilently()) {
+    if (isAutoConnectEnabled() && canAutoConnectSilently()) {
       void (async () => {
         try {
           const result = await connectWallet({ silent: true });
@@ -232,8 +244,10 @@ export function ConnectProvider({ children }: { children: ReactNode }) {
     setError(null);
     try {
       const result = await connectWallet({ silent: false });
-      if (result) applyBoot(result);
-      else setPhase('idle');
+      if (result) {
+        applyBoot(result);
+        setAutoConnectState(true); // connectWallet enabled the pref — reflect it
+      } else setPhase('idle');
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setPhase('error');
@@ -243,7 +257,8 @@ export function ConnectProvider({ children }: { children: ReactNode }) {
   const disconnect = useCallback(async () => {
     unwire.current?.();
     unwire.current = null;
-    await disconnectWallet();
+    await disconnectWallet(); // also disables the auto-connect pref
+    setAutoConnectState(false);
     setIdentity(null);
     setAssets([]);
     setDeals({});
@@ -282,13 +297,15 @@ export function ConnectProvider({ children }: { children: ReactNode }) {
       deals,
       permissions,
       transport,
+      autoConnect,
+      setAutoConnect,
       connect,
       disconnect,
       refreshAssets,
       refreshDeals,
       fundEscrow,
     }),
-    [phase, error, identity, nametag, address, assets, deals, permissions, transport, connect, disconnect, refreshAssets, refreshDeals, fundEscrow],
+    [phase, error, identity, nametag, address, assets, deals, permissions, transport, autoConnect, setAutoConnect, connect, disconnect, refreshAssets, refreshDeals, fundEscrow],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

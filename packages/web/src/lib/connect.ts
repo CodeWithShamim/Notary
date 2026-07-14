@@ -62,8 +62,23 @@ export const NOTARY_PERMISSIONS: PermissionScope[] = [
 export const CONNECT_EVENTS = WALLET_EVENTS;
 
 const SESSION_KEY = 'notary.connect.sessionId';
+const AUTOCONNECT_KEY = 'notary.connect.auto';
 
 let active: AutoConnectResult | null = null;
+
+/**
+ * Auto-connect preference (persisted). When enabled, the app silently restores
+ * an already-approved session on page load. Defaults to ON — a returning user
+ * who connected before is reconnected without a click. An explicit disconnect
+ * turns it off so the app doesn't immediately reconnect.
+ */
+export function isAutoConnectEnabled(): boolean {
+  return localStorage.getItem(AUTOCONNECT_KEY) !== 'false';
+}
+
+export function setAutoConnectEnabled(enabled: boolean): void {
+  localStorage.setItem(AUTOCONNECT_KEY, enabled ? 'true' : 'false');
+}
 
 function dappMetadata() {
   return {
@@ -112,6 +127,7 @@ export async function connect(opts: { silent?: boolean } = {}): Promise<ConnectB
     });
     active = result;
     localStorage.setItem(SESSION_KEY, result.connection.sessionId);
+    if (!opts.silent) setAutoConnectEnabled(true); // a real connect opts into auto-reconnect
     return boot(result);
   } catch (err) {
     localStorage.removeItem(SESSION_KEY); // stale/expired session id — don't keep retrying it
@@ -143,6 +159,7 @@ export function canAutoConnectSilently(): boolean {
 /** Disconnect and clear the resumable session (also closes the popup in popup mode). */
 export async function disconnect(): Promise<void> {
   localStorage.removeItem(SESSION_KEY);
+  setAutoConnectEnabled(false); // explicit disconnect → don't auto-reconnect next load
   const current = active;
   active = null;
   if (current) {

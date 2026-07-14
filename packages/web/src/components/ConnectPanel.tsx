@@ -7,7 +7,7 @@ import { NOTARY_PERMISSIONS } from '../lib/connect.js';
  * the wallet — Notary only requests least-privilege permissions.
  */
 export function ConnectPanel() {
-  const { phase, error, connect } = useConnect();
+  const { phase, error, connect, autoConnect, setAutoConnect } = useConnect();
   const connecting = phase === 'connecting';
 
   return (
@@ -30,6 +30,15 @@ export function ConnectPanel() {
       <button className="btn" disabled={connecting} onClick={() => void connect()}>
         {connecting ? <span className="spinner" /> : 'Connect Sphere wallet'}
       </button>
+      <label className="row" style={{ marginTop: 12, cursor: 'pointer', gap: 8 }}>
+        <input
+          type="checkbox"
+          style={{ width: 'auto' }}
+          checked={autoConnect}
+          onChange={(e) => setAutoConnect(e.target.checked)}
+        />
+        <span className="muted">Reconnect automatically next time (no click if the wallet already approved this site)</span>
+      </label>
     </div>
   );
 }
