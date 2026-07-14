@@ -17,7 +17,7 @@ export function CtaBand() {
               <span className="lp-modal-tag">
                 <i className="lp-modal-live" /> notary.agent
               </span>
-              <span className="lp-modal-net" aria-hidden="true">unicity · mainnet</span>
+              <span className="lp-modal-net" aria-hidden="true">unicity · Testnet</span>
             </div>
 
             <div className="lp-modal-body">

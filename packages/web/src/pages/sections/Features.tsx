@@ -1,6 +1,14 @@
 import { Link } from 'react-router-dom';
 import { Reveal } from './Reveal.js';
-import { KeyIcon, CogIcon, LockIcon, ReceiptIcon, BotIcon, ArrowRightIcon } from '../../components/Icon.js';
+import {
+  KeyIcon,
+  CogIcon,
+  LockIcon,
+  ReceiptIcon,
+  ClockIcon,
+  BotIcon,
+  ArrowRightIcon,
+} from '../../components/Icon.js';
 
 export function Features() {
   return (
@@ -16,7 +24,7 @@ export function Features() {
         </div>
       </Reveal>
       <div className="lp-features">
-        <Reveal from="left">
+        <Reveal from="up">
           <article className="lp-feature">
             <div className="lp-feature-icon"><KeyIcon size={26} /></div>
             <h3 className="lp-feature-title">Non-custodial keys</h3>
@@ -26,7 +34,7 @@ export function Features() {
             </p>
           </article>
         </Reveal>
-        <Reveal from="right" delay={80}>
+        <Reveal from="up" delay={80}>
           <article className="lp-feature">
             <div className="lp-feature-icon"><CogIcon size={26} /></div>
             <h3 className="lp-feature-title">Autonomous settlement</h3>
@@ -36,7 +44,7 @@ export function Features() {
             </p>
           </article>
         </Reveal>
-        <Reveal from="left" delay={160}>
+        <Reveal from="up" delay={160}>
           <article className="lp-feature">
             <div className="lp-feature-icon"><LockIcon size={26} /></div>
             <h3 className="lp-feature-title">Encrypted DMs</h3>
@@ -46,7 +54,7 @@ export function Features() {
             </p>
           </article>
         </Reveal>
-        <Reveal from="right" delay={240}>
+        <Reveal from="up" delay={80}>
           <article className="lp-feature">
             <div className="lp-feature-icon"><ReceiptIcon size={26} /></div>
             <h3 className="lp-feature-title">On-chain settlement trail</h3>
@@ -56,14 +64,24 @@ export function Features() {
             </p>
           </article>
         </Reveal>
-        <Reveal from="up" delay={120} className="span-all">
-          <article className="lp-feature lp-feature-wide">
+        <Reveal from="up" delay={160}>
+          <article className="lp-feature">
+            <div className="lp-feature-icon"><ClockIcon size={26} /></div>
+            <h3 className="lp-feature-title">Deadlines that self-enforce</h3>
+            <p className="lp-feature-body">
+              Every deal carries a timeout. Miss the confirmation window and the agent settles it
+              automatically - funds never get stuck waiting on a silent counterparty.
+            </p>
+          </article>
+        </Reveal>
+        <Reveal from="up" delay={240}>
+          <article className="lp-feature">
             <div className="lp-feature-icon"><BotIcon size={26} /></div>
             <h3 className="lp-feature-title">Also speaks machine</h3>
             <p className="lp-feature-body">
-              The web app is just one client. Other agents discover @notary on the Unicity intent
-              market and hire it over encrypted DMs with a documented JSON protocol - plus{' '}
-              <code>!pool</code> group-escrow commands in NIP-29 chats.
+              Other agents discover @notary on the Unicity intent market and hire it over encrypted
+              DMs with a documented JSON protocol - plus <code>!pool</code> group-escrow commands in
+              NIP-29 chats.
             </p>
             <Link to="/agent" className="lp-feature-link">
               See the protocol reference <ArrowRightIcon size={15} className="inline-ico" />

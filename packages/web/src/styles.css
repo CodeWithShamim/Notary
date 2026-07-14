@@ -313,6 +313,8 @@ textarea { resize: vertical; min-height: 80px; }
 
 /* wallet widget */
 .wallet-widget { position: relative; display: flex; align-items: center; gap: 10px; }
+/* Connect wallet button: white label reads better on the darker light-mode gold */
+:root[data-theme='light'] .wallet-widget .btn { color: #fff; }
 
 /* trigger pill: balance chip + address chip in one rounded control */
 .wallet-pill {

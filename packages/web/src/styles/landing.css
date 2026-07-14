@@ -396,6 +396,11 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
 }
+/* .reveal wrappers are the grid items; stretch them so each step card fills
+   the row height and all three cards are the same height. */
+.lp-steps { align-items: stretch; }
+.lp-steps > .reveal { display: flex; align-items: stretch; }
+.lp-steps > .reveal > .lp-step { width: 100%; height: 100%; }
 .lp-step {
   position: relative;
   padding: 32px 26px 30px;
@@ -636,6 +641,11 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
 }
+/* The .reveal wrappers are the actual grid items; make them stretch and let
+   the card fill the row height so every card in a row is the same height. */
+.lp-features { align-items: stretch; }
+.lp-features > .reveal { display: flex; align-items: stretch; }
+.lp-features > .reveal > .lp-feature { width: 100%; height: 100%; }
 .lp-feature {
   position: relative;
   padding: 28px 26px;
@@ -1098,6 +1108,11 @@
     #f4f1ea;
 }
 :root[data-theme='light'] .landing ::selection { background: #8b5cf633; color: #1b1a24; }
+
+/* footer: drop the dark fade-to-black gradient on the paper canvas */
+:root[data-theme='light'] .lp-footer {
+  background: radial-gradient(900px 420px at 50% 120%, #8b5cf60f, transparent 66%);
+}
 
 /* aurora blobs get softer so they tint rather than dominate the paper */
 :root[data-theme='light'] .lp-aurora { opacity: 0.5; }

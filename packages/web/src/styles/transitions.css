@@ -1,32 +1,180 @@
-/* Page-switch transition — "web3 modern" for Notary.
+/* Page-switch transitions — "web3 modern" for Notary.
    All classes/keyframes are prefixed `ptx-` to avoid global collisions.
-   Animates transform / opacity / filter only (GPU-friendly). */
+   Animates transform / opacity / filter / clip only (GPU-friendly).
+
+   Each route has its own variant, selected via [data-ptx="..."] on both the
+   content wrapper and the neon overlay (see PageTransition.tsx):
+     scan   Home        light bar scans top -> bottom
+     slide  New Deal     content slides in from the right
+     rise   My Deals     content lifts up, light bar scans bottom -> top
+     zoom   Deal Detail  content pulls into focus from center
+     tilt   Pools        3D perspective tilt settles flat
+     glitch Agent        quick chromatic glitch-in */
 
 :root {
-  --ptx-ink: #0e0e12;
-  --ptx-gold: #e2b24e;
+  --ptx-cyan: var(--w3-cyan, #22d3ee);
+  --ptx-violet: var(--w3-violet, #a855f7);
+  --ptx-magenta: var(--w3-magenta, #ec4899);
 }
 
-/* Content wrapper: re-keyed by pathname so it remounts and replays enter. */
 .ptx-content {
-  animation: ptx-enter 450ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  will-change: transform, opacity, filter;
+  transform-origin: 50% 0;
 }
 
-@keyframes ptx-enter {
-  from {
+/* ------------------------------------------------------------------ */
+/* Content reveals                                                     */
+/* ------------------------------------------------------------------ */
+
+.ptx-content[data-ptx='scan'] {
+  animation: ptx-enter-scan 520ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+@keyframes ptx-enter-scan {
+  0% {
     opacity: 0;
-    transform: translateY(14px);
-    filter: blur(6px);
+    transform: translateY(10px);
+    filter: blur(3px);
   }
-  to {
+
+  60% {
+    filter: blur(0);
+  }
+
+  100% {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
     filter: blur(0);
   }
 }
 
-/* Full-viewport neon sweep overlay — never blocks interaction. */
+.ptx-content[data-ptx='slide'] {
+  animation: ptx-enter-slide 500ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  transform-origin: 100% 50%;
+}
+
+@keyframes ptx-enter-slide {
+  0% {
+    opacity: 0;
+    transform: translateX(48px);
+    filter: blur(4px);
+    clip-path: inset(0 0 0 6%);
+  }
+
+  100% {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.ptx-content[data-ptx='rise'] {
+  animation: ptx-enter-rise 520ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  transform-origin: 50% 100%;
+}
+
+@keyframes ptx-enter-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(34px) scale(0.99);
+    filter: blur(3px);
+    clip-path: inset(10% 0 0 0);
+  }
+
+  100% {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.ptx-content[data-ptx='zoom'] {
+  animation: ptx-enter-zoom 480ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  transform-origin: 50% 42%;
+}
+
+@keyframes ptx-enter-zoom {
+  0% {
+    opacity: 0;
+    transform: scale(1.06);
+    filter: blur(6px);
+  }
+
+  55% {
+    filter: blur(0);
+  }
+
+  100% {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+.ptx-content[data-ptx='tilt'] {
+  animation: ptx-enter-tilt 560ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  transform-origin: 50% 0;
+  perspective: 1200px;
+}
+
+@keyframes ptx-enter-tilt {
+  0% {
+    opacity: 0;
+    transform: perspective(1200px) rotateX(9deg) translateY(22px);
+    filter: blur(3px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: perspective(1200px) rotateX(0) translateY(0);
+    filter: blur(0);
+  }
+}
+
+.ptx-content[data-ptx='glitch'] {
+  animation: ptx-enter-glitch 480ms steps(1, end) backwards;
+}
+
+@keyframes ptx-enter-glitch {
+  0% {
+    opacity: 0;
+    transform: translateX(-6px);
+    clip-path: inset(0 0 62% 0);
+    filter: drop-shadow(-4px 0 0 var(--ptx-magenta)) drop-shadow(4px 0 0 var(--ptx-cyan));
+  }
+
+  25% {
+    opacity: 1;
+    transform: translateX(5px);
+    clip-path: inset(48% 0 12% 0);
+    filter: drop-shadow(3px 0 0 var(--ptx-magenta)) drop-shadow(-3px 0 0 var(--ptx-cyan));
+  }
+
+  50% {
+    transform: translateX(-3px);
+    clip-path: inset(14% 0 40% 0);
+    filter: drop-shadow(-2px 0 0 var(--ptx-magenta)) drop-shadow(2px 0 0 var(--ptx-cyan));
+  }
+
+  75% {
+    transform: translateX(2px);
+    clip-path: inset(0 0 6% 0);
+    filter: drop-shadow(1px 0 0 var(--ptx-cyan));
+  }
+
+  100% {
+    opacity: 1;
+    transform: none;
+    clip-path: inset(0 0 0 0);
+    filter: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Neon overlay — a light bar + halo, oriented per variant.            */
+/* ------------------------------------------------------------------ */
+
 .ptx-sweep {
   position: fixed;
   inset: 0;
@@ -35,97 +183,274 @@
   overflow: hidden;
 }
 
-/* Diagonal neon light band that wipes across the viewport. */
+/* Base light bar (horizontal). Direction/orientation set per variant. */
 .ptx-sweep::before {
   content: '';
   position: absolute;
-  top: -20%;
-  left: 0;
-  width: 45%;
-  height: 140%;
-  transform: translateX(-160%) skewX(-18deg);
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    color-mix(in srgb, var(--w3-cyan, #22d3ee) 35%, transparent) 30%,
-    color-mix(in srgb, var(--w3-violet, #a855f7) 55%, transparent) 55%,
-    color-mix(in srgb, var(--w3-magenta, #ec4899) 35%, transparent) 78%,
-    transparent 100%
-  );
-  filter: blur(8px);
+  left: -10%;
+  top: 0;
+  width: 120%;
+  height: 3px;
+  transform: translateY(-40px);
+  background: linear-gradient(90deg,
+      transparent 0%,
+      color-mix(in srgb, var(--ptx-cyan) 90%, white) 20%,
+      color-mix(in srgb, var(--ptx-violet) 90%, white) 50%,
+      color-mix(in srgb, var(--ptx-magenta) 90%, white) 80%,
+      transparent 100%);
   box-shadow:
-    0 0 40px 6px color-mix(in srgb, var(--w3-cyan, #22d3ee) 30%, transparent),
-    0 0 80px 20px color-mix(in srgb, var(--w3-violet, #a855f7) 20%, transparent);
-  animation: ptx-wipe 620ms cubic-bezier(0.4, 0, 0.1, 1) both;
+    0 0 12px 2px color-mix(in srgb, var(--ptx-cyan) 60%, transparent),
+    0 0 34px 8px color-mix(in srgb, var(--ptx-violet) 45%, transparent),
+    0 0 70px 24px color-mix(in srgb, var(--ptx-magenta) 22%, transparent);
 }
 
-/* Faint grid/scanline shimmer trailing behind the band. */
-.ptx-sweep::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image:
-    repeating-linear-gradient(
-      0deg,
-      transparent 0px,
-      transparent 3px,
-      color-mix(in srgb, var(--w3-cyan, #22d3ee) 6%, transparent) 3px,
-      color-mix(in srgb, var(--w3-cyan, #22d3ee) 6%, transparent) 4px
-    );
-  opacity: 0;
-  animation: ptx-shimmer 620ms ease-out both;
+/* scan: bar sweeps top -> bottom */
+.ptx-sweep[data-ptx='scan']::before {
+  animation: ptx-scan-down 640ms cubic-bezier(0.5, 0, 0.2, 1) both;
 }
 
-@keyframes ptx-wipe {
+@keyframes ptx-scan-down {
   0% {
-    transform: translateX(-160%) skewX(-18deg);
+    transform: translateY(-40px);
     opacity: 0;
   }
-  15% {
+
+  12% {
     opacity: 1;
   }
+
   85% {
     opacity: 1;
   }
+
   100% {
-    transform: translateX(320%) skewX(-18deg);
+    transform: translateY(100vh);
     opacity: 0;
   }
 }
 
-@keyframes ptx-shimmer {
+/* rise: bar sweeps bottom -> top */
+.ptx-sweep[data-ptx='rise']::before {
+  top: auto;
+  bottom: 0;
+  transform: translateY(40px);
+  animation: ptx-scan-up 640ms cubic-bezier(0.5, 0, 0.2, 1) both;
+}
+
+@keyframes ptx-scan-up {
   0% {
+    transform: translateY(40px);
     opacity: 0;
   }
-  30% {
-    opacity: 0.6;
+
+  12% {
+    opacity: 1;
   }
+
+  85% {
+    opacity: 1;
+  }
+
   100% {
+    transform: translateY(-100vh);
     opacity: 0;
   }
 }
 
-/* Reduced motion: quick opacity fade only, no movement/blur/sweep travel. */
-@media (prefers-reduced-motion: reduce) {
-  .ptx-content {
-    animation: ptx-fade 200ms ease-out both;
+/* slide + tilt: vertical bar sweeps left -> right */
+.ptx-sweep[data-ptx='slide']::before,
+.ptx-sweep[data-ptx='tilt']::before {
+  left: 0;
+  top: -10%;
+  width: 3px;
+  height: 120%;
+  transform: translateX(-40px);
+  background: linear-gradient(0deg,
+      transparent 0%,
+      color-mix(in srgb, var(--ptx-cyan) 90%, white) 20%,
+      color-mix(in srgb, var(--ptx-violet) 90%, white) 50%,
+      color-mix(in srgb, var(--ptx-magenta) 90%, white) 80%,
+      transparent 100%);
+  animation: ptx-scan-right 620ms cubic-bezier(0.5, 0, 0.2, 1) both;
+}
+
+@keyframes ptx-scan-right {
+  0% {
+    transform: translateX(-40px);
+    opacity: 0;
   }
 
-  .ptx-sweep::before {
+  12% {
+    opacity: 1;
+  }
+
+  85% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateX(100vw);
+    opacity: 0;
+  }
+}
+
+/* zoom: no bar — a central radial bloom pulses out */
+.ptx-sweep[data-ptx='zoom']::before {
+  left: 50%;
+  top: 50%;
+  width: 40vmax;
+  height: 40vmax;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0.2);
+  background: radial-gradient(circle,
+      color-mix(in srgb, var(--ptx-violet) 30%, transparent) 0%,
+      color-mix(in srgb, var(--ptx-cyan) 10%, transparent) 45%,
+      transparent 70%);
+  box-shadow: none;
+  animation: ptx-bloom 560ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes ptx-bloom {
+  0% {
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 0;
+  }
+
+  30% {
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: translate(-50%, -50%) scale(1.8);
+    opacity: 0;
+  }
+}
+
+/* glitch: bar flashes in place a couple of times */
+.ptx-sweep[data-ptx='glitch']::before {
+  top: 46%;
+  transform: none;
+  animation: ptx-flash 480ms steps(1, end) both;
+}
+
+@keyframes ptx-flash {
+
+  0%,
+  100% {
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+    top: 46%;
+  }
+
+  20% {
+    opacity: 0;
+  }
+
+  40% {
+    opacity: 1;
+    top: 24%;
+  }
+
+  50% {
+    opacity: 0;
+  }
+
+  70% {
+    opacity: 1;
+    top: 68%;
+  }
+
+  80% {
+    opacity: 0;
+  }
+}
+
+/* Soft bloom that follows a vertical scan for depth (scan/rise only). */
+.ptx-sweep[data-ptx='scan']::after,
+.ptx-sweep[data-ptx='rise']::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 220px;
+  background: radial-gradient(120% 100% at 50% 0%,
+      color-mix(in srgb, var(--ptx-violet) 18%, transparent) 0%,
+      color-mix(in srgb, var(--ptx-cyan) 7%, transparent) 40%,
+      transparent 72%);
+}
+
+.ptx-sweep[data-ptx='scan']::after {
+  top: 0;
+  transform: translateY(-260px);
+  animation: ptx-bloom-down 640ms cubic-bezier(0.5, 0, 0.2, 1) both;
+}
+
+@keyframes ptx-bloom-down {
+  0% {
+    transform: translateY(-260px);
+    opacity: 0;
+  }
+
+  15% {
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+.ptx-sweep[data-ptx='rise']::after {
+  bottom: 0;
+  transform: translateY(260px) scaleY(-1);
+  animation: ptx-bloom-up 640ms cubic-bezier(0.5, 0, 0.2, 1) both;
+}
+
+@keyframes ptx-bloom-up {
+  0% {
+    transform: translateY(260px) scaleY(-1);
+    opacity: 0;
+  }
+
+  15% {
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: translateY(-100vh) scaleY(-1);
+    opacity: 0;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Reduced motion: quick opacity fade only for every variant.          */
+/* ------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+
+  .ptx-content,
+  .ptx-content[data-ptx] {
     animation: ptx-fade 200ms ease-out both;
+    clip-path: none;
     transform: none;
     filter: none;
-    box-shadow: none;
   }
 
+  .ptx-sweep::before,
   .ptx-sweep::after {
-    animation: none;
+    animation: ptx-fade 200ms ease-out both !important;
+    transform: none;
+    box-shadow: none;
   }
 
   @keyframes ptx-fade {
     from {
       opacity: 0;
     }
+
     to {
       opacity: 1;
     }
