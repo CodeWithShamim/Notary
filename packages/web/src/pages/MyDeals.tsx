@@ -39,7 +39,7 @@ export function MyDeals() {
       </AsideCard>
       <AsideCard>
         <p className="aside-note">Rows update live as @notary DMs new <code>deal.update</code> snapshots to your wallet.</p>
-        <Link to="/new" className="btn" style={{ marginTop: 14, width: '100%', justifyContent: 'center' }}>Open a new deal</Link>
+        <Link to="/new" className="btn block mt-lg">Open a new deal</Link>
       </AsideCard>
     </>
   );
@@ -51,7 +51,7 @@ export function MyDeals() {
       {list.map(({ snapshot: d }) => {
         const role = d.buyerTag?.toLowerCase() === nametag?.toLowerCase() ? 'buyer' : d.sellerTag?.toLowerCase() === nametag?.toLowerCase() ? 'seller' : '?';
         return (
-          <Link to={`/deals/${d.dealId}`} key={d.dealId} style={{ color: 'inherit' }}>
+          <Link to={`/deals/${d.dealId}`} key={d.dealId} className="deal-link">
             <div className="deal-row">
               <div>
                 <div className="row">
@@ -59,10 +59,10 @@ export function MyDeals() {
                   <span className={`badge ${d.state}`}>{d.state.replace(/_/g, ' ')}</span>
                   <span className="badge">{role}</span>
                 </div>
-                <div className="muted" style={{ marginTop: 4 }}>{d.deliverable.slice(0, 90)}</div>
+                <div className="muted deal-deliverable">{d.deliverable.slice(0, 90)}</div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ color: 'var(--gold)', fontWeight: 600 }}>{human(d.amount)} {d.symbol ?? ''}</div>
+              <div className="deal-figures">
+                <div className="deal-amt">{human(d.amount)} {d.symbol ?? ''}</div>
                 {d.deadlineAt && <div className="muted deadline"><ClockIcon size={14} className="inline-ico" /> {timeLeft(d.deadlineAt)}</div>}
               </div>
             </div>

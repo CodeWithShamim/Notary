@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { HAPPY_PATH, type DealState } from '@notary/shared';
@@ -92,29 +92,29 @@ export function DealDetail() {
   return (
     <PageLayout aside={aside}>
       <div className="spread">
-        <h1 className="mono" style={{ fontSize: 24 }}>{dealId}</h1>
-        <span className={`badge ${state}`} style={{ fontSize: 14 }}>{state.replace(/_/g, ' ')}</span>
+        <h1 className="mono deal-id">{dealId}</h1>
+        <span className={`badge lg ${state}`}>{state.replace(/_/g, ' ')}</span>
       </div>
-      <p className="sub" style={{ marginBottom: 18 }}>{snap?.deliverable}</p>
+      <p className="sub mb-lg">{snap?.deliverable}</p>
 
       {/* stepper */}
       {stepIndex >= 0 ? (
         <div className="stepper">
           {path.map((s, i) => (
-            <span key={s} style={{ display: 'contents' }}>
+            <Fragment key={s}>
               {i > 0 && <span className="step-line" />}
               <span className={`step ${i < stepIndex ? 'done' : i === stepIndex ? 'current' : ''}`}>
                 <span className="dot">{i < stepIndex ? <CheckIcon size={13} /> : i + 1}</span>
                 <span className="lbl">{s.replace(/_/g, ' ')}</span>
               </span>
-            </span>
+            </Fragment>
           ))}
         </div>
       ) : (
-        <div className="card" style={{ margin: '18px 0', borderColor: state === 'REFUNDED' ? 'var(--blue)' : 'var(--red)' }}>
+        <div className={`card terminal-card${state === 'REFUNDED' ? ' refunded' : ''}`}>
           <b>{TERMINAL_LABEL[state] ?? state}</b>
           {snap?.settlement && (
-            <div className="muted" style={{ marginTop: 6 }}>
+            <div className="muted mt-sm">
               {snap.settlement.toBuyer && <>↩ {human(snap.settlement.toBuyer)} returned to @{snap.buyerTag} · </>}
               {snap.settlement.fee && <>fee retained {human(snap.settlement.fee)}</>}
             </div>
@@ -125,7 +125,7 @@ export function DealDetail() {
       {/* fund escrow card - the star of the buyer flow */}
       {state === 'AWAITING_FUNDS' && isBuyer && snap && (
         <div className="pay-card">
-          <h2 style={{ marginTop: 0 }}>Fund escrow - pay {human(snap.amount)} {snap.symbol ?? ''}</h2>
+          <h2>Fund escrow - pay {human(snap.amount)} {snap.symbol ?? ''}</h2>
           <p className="muted">
             Your wallet transfers the escrow amount to @notary, tagged with this deal id. Funds stay with the
             notary until delivery is confirmed, disputed, or timed out - the agent settles on its own either way.
@@ -239,7 +239,7 @@ export function DealDetail() {
           </ul>
         )}
         {snap?.settlement?.transferIds && snap.settlement.transferIds.length > 0 && (
-          <p className="muted" style={{ marginTop: 10 }}>
+          <p className="muted mt-md">
             Settlement transfer id(s): <code>{snap.settlement.transferIds.join(', ')}</code>
           </p>
         )}

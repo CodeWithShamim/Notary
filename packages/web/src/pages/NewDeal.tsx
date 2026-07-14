@@ -25,7 +25,7 @@ export function NewDeal() {
 
   if (!nametag) {
     return (
-      <div className="card" style={{ maxWidth: 560 }}>
+      <div className="card narrow">
         <h2>Your wallet needs a nametag</h2>
         <p className="muted">
           Deals pay out to nametags - the notary refunds buyers at theirs. Set a nametag in your Sphere wallet,
@@ -38,7 +38,7 @@ export function NewDeal() {
 
   if (sentPayload) {
     return (
-      <div className="card" style={{ maxWidth: 640 }}>
+      <div className="card wide">
         <h2 className="with-ico">Deal proposed <CheckIcon size={20} className="inline-ico ok" /></h2>
         <p className="muted">
           This exact message was DM'd (NIP-17 encrypted) to @notary - full transparency, no hidden API:

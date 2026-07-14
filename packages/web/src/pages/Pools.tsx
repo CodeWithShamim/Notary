@@ -44,7 +44,7 @@ export function Pools() {
 !pool cancel pool_ab12cd                   # creator only - refunds everyone`}</pre>
       </div>
 
-      <h2 style={{ marginTop: 24 }}>Live pools</h2>
+      <h2 className="mt-xl">Live pools</h2>
       {pools.length === 0 ? (
         <div className="empty"><div className="big"><InboxIcon size={40} /></div>No pools yet.</div>
       ) : (

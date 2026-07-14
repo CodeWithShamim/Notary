@@ -77,6 +77,9 @@ code, .mono { font-family: var(--font-mono); font-size: 0.85em; }
 
 .app { max-width: 1080px; margin: 0 auto; padding: 0 20px 80px; }
 
+/* page footer — legal / provenance note under every route */
+.app-footer { margin-top: 60px; padding-top: 16px; border-top: 1px solid var(--line-strong); }
+
 /* header */
 .topbar {
   display: flex; align-items: center; gap: 20px;
@@ -297,6 +300,7 @@ h3 { font-size: 15px; margin: 0 0 8px; color: var(--text); }
 .btn.danger { background: transparent; color: var(--red); border: 1px solid #e07a6a55; }
 .btn.danger:hover:not(:disabled) { background: #e07a6a1a; }
 .btn.small { padding: 6px 12px; font-size: 13px; }
+.btn.block { width: 100%; justify-content: center; }
 
 label.field { display: block; margin-bottom: 14px; }
 label.field span { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 5px; }
@@ -314,6 +318,18 @@ textarea { resize: vertical; min-height: 80px; }
 .error-text { color: var(--red); font-size: 13px; margin-top: 8px; }
 .ok-text { color: var(--green); font-size: 13px; margin-top: 8px; }
 
+/* ── Small layout utilities ───────────────────────────────────────────
+   Vertical-rhythm nudges that replace one-off inline style objects.
+   Reach for these instead of style={{ marginTop: … }}. */
+.mt-sm { margin-top: 6px; }
+.mt-md { margin-top: 10px; }
+.mt-lg { margin-top: 16px; }
+.mt-xl { margin-top: 24px; }
+.mb-lg { margin-bottom: 18px; }
+/* content-width caps for single-column notice/confirmation cards */
+.card.narrow { max-width: 560px; }
+.card.wide { max-width: 640px; }
+
 /* badges / states */
 .badge {
   display: inline-block; padding: 3px 10px; border-radius: 999px;
@@ -329,6 +345,12 @@ textarea { resize: vertical; min-height: 80px; }
 .badge.CANCELLED, .badge.EXPIRED { background: #e07a6a22; color: var(--red); }
 .badge.online { background: #6fce8f22; color: var(--green); }
 .badge.offline { background: #e07a6a22; color: var(--red); }
+.badge.lg { font-size: 14px; }
+
+/* deal detail heading + terminal-state card */
+.deal-id { font-size: 24px; }
+.terminal-card { margin: 18px 0; border-color: var(--red); }
+.terminal-card.refunded { border-color: var(--blue); }
 
 /* stepper */
 .stepper { display: flex; align-items: center; gap: 0; margin: 18px 0; flex-wrap: wrap; }
@@ -365,10 +387,16 @@ textarea { resize: vertical; min-height: 80px; }
   flex-wrap: wrap;
 }
 .deal-row:hover { border-color: var(--gold-dim); }
+/* whole row is a link; inherit text colour so only the amount reads gold */
+.deal-link { color: inherit; display: block; }
+.deal-figures { text-align: right; }
+.deal-amt { color: var(--gold); font-weight: 600; }
+.deal-deliverable { margin-top: 4px; }
 
 /* stat tiles */
 .stat { padding: 16px; background: var(--ink-1); border: 1px solid var(--line-strong); border-radius: var(--radius); }
 .stat .v { font-size: 24px; font-family: var(--font-display); color: var(--gold); }
+.stat .v.sm { font-size: 15px; }
 .stat .k { font-size: 12px; color: var(--text-dim); letter-spacing: 0.5px; text-transform: uppercase; }
 
 /* mnemonic */
@@ -461,6 +489,7 @@ textarea { resize: vertical; min-height: 80px; }
   border-radius: var(--radius); padding: 20px; margin-bottom: 16px;
   box-shadow: 0 0 24px #e2b24e18;
 }
+.pay-card h2 { margin-top: 0; }
 
 /* modal */
 .modal-backdrop {
@@ -473,6 +502,7 @@ textarea { resize: vertical; min-height: 80px; }
 table.clean { width: 100%; border-collapse: collapse; font-size: 13px; }
 table.clean th { text-align: left; color: var(--text-dim); font-weight: 500; padding: 8px 10px; border-bottom: 1px solid var(--line-strong); }
 table.clean td { padding: 8px 10px; border-bottom: 1px solid var(--line); }
+table.clean th.num, table.clean td.num { text-align: right; }
 
 pre.json {
   background: var(--ink-0); border: 1px solid var(--line-strong); border-radius: 8px;

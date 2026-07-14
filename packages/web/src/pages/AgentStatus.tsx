@@ -25,7 +25,7 @@ export function AgentStatus() {
               <div className="k">nametag</div>
             </div>
             <div className="stat">
-              <div className="v" style={{ fontSize: 15 }} title={status.identity.directAddress ?? ''}>
+              <div className="v sm" title={status.identity.directAddress ?? ''}>
                 <code>{shortAddr(status.identity.directAddress, 14)}</code>
               </div>
               <div className="k">DIRECT address</div>
@@ -36,7 +36,7 @@ export function AgentStatus() {
             </div>
           </div>
 
-          <div className="grid2" style={{ marginTop: 16 }}>
+          <div className="grid2 mt-lg">
             <div className="card">
               <h2>Deals by state</h2>
               {Object.keys(status.dealsByState).length === 0 ? (
@@ -47,14 +47,14 @@ export function AgentStatus() {
                     {Object.entries(status.dealsByState).map(([s, n]) => (
                       <tr key={s}>
                         <td><span className={`badge ${s}`}>{s.replace(/_/g, ' ')}</span></td>
-                        <td style={{ textAlign: 'right' }}>{n}</td>
+                        <td className="num">{n}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               )}
               {status.escrowVolume.length > 0 && (
-                <p className="muted" style={{ marginTop: 10 }}>
+                <p className="muted mt-md">
                   Escrowed volume: {status.escrowVolume.map((v) => `${human(v.total)} ${v.symbol ?? v.coinId.slice(0, 8)}`).join(' · ')}
                 </p>
               )}
@@ -64,18 +64,18 @@ export function AgentStatus() {
               <h2>Treasury</h2>
               <table className="clean">
                 <thead>
-                  <tr><th>Asset</th><th style={{ textAlign: 'right' }}>Balance</th></tr>
+                  <tr><th>Asset</th><th className="num">Balance</th></tr>
                 </thead>
                 <tbody>
                   {status.treasury.assets.map((a) => (
                     <tr key={a.coinId}>
                       <td>{a.symbol}</td>
-                      <td style={{ textAlign: 'right' }}>{human(a.total, a.decimals)}</td>
+                      <td className="num">{human(a.total, a.decimals)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              <p className="muted" style={{ marginTop: 10 }}>
+              <p className="muted mt-md">
                 Fee: {status.feeBps / 100}% (disputes {status.disputeFeeBps / 100}%).
                 {status.treasury.lastRun && <> Treasury loop last ran {when(status.treasury.lastRun)}.</>}
                 {status.lastRebalance ? (
@@ -87,7 +87,7 @@ export function AgentStatus() {
             </div>
           </div>
 
-          <div className="card" style={{ marginTop: 16 }}>
+          <div className="card mt-lg">
             <h2>Timers</h2>
             <p className="muted">
               Accept within {status.timers.acceptTimeoutMs / 3_600_000}h · fund within {status.timers.fundingTimeoutMs / 3_600_000}h ·
@@ -98,7 +98,7 @@ export function AgentStatus() {
         </>
       )}
 
-      <div className="card" style={{ marginTop: 16 }}>
+      <div className="card mt-lg">
         <h2>Wire protocol (for builders)</h2>
         <p className="muted">
           Integrate your own agent: send NIP-17 encrypted JSON DMs to <code>@{status?.identity.nametag ?? 'notary'}</code>.
