@@ -266,6 +266,19 @@ textarea { resize: vertical; min-height: 80px; }
 .wallet-caret { color: var(--text-dim); transition: transform .18s ease; }
 .wallet-pill.open .wallet-caret { transform: rotate(180deg); }
 
+/* restoring session on load */
+.wallet-pill.loading {
+  align-items: center; gap: 8px; padding: 4px 12px 4px 10px; cursor: default;
+}
+.wallet-pill.loading:hover { border-color: var(--line-strong); }
+.wallet-pill.loading .wallet-pill-id { background: transparent; padding: 0; }
+.wallet-skeleton {
+  display: inline-block; width: 78px; height: 12px; border-radius: 999px;
+  background: linear-gradient(90deg, var(--ink-3) 25%, var(--line-strong) 50%, var(--ink-3) 75%);
+  background-size: 200% 100%; animation: wallet-shimmer 1.2s ease-in-out infinite;
+}
+@keyframes wallet-shimmer { to { background-position: -200% 0; } }
+
 /* dropdown menu */
 .wallet-menu {
   position: absolute; top: calc(100% + 8px); right: 0; z-index: 60;

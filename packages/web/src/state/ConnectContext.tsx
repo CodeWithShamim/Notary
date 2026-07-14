@@ -236,8 +236,12 @@ export function ConnectProvider({ children }: { children: ReactNode }) {
           if (!cancelled && result) applyBoot(result);
         } catch {
           /* silent path never surfaces errors */
+        } finally {
+          if (!cancelled) setRestoring(false);
         }
       })();
+    } else {
+      setRestoring(false);
     }
     return () => {
       cancelled = true;
@@ -295,6 +299,7 @@ export function ConnectProvider({ children }: { children: ReactNode }) {
   const value = useMemo<ConnectState>(
     () => ({
       phase,
+      restoring,
       error,
       identity,
       nametag,
@@ -311,7 +316,7 @@ export function ConnectProvider({ children }: { children: ReactNode }) {
       refreshDeals,
       fundEscrow,
     }),
-    [phase, error, identity, nametag, address, assets, deals, permissions, transport, autoConnect, setAutoConnect, connect, disconnect, refreshAssets, refreshDeals, fundEscrow],
+    [phase, restoring, error, identity, nametag, address, assets, deals, permissions, transport, autoConnect, setAutoConnect, connect, disconnect, refreshAssets, refreshDeals, fundEscrow],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

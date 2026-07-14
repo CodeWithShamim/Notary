@@ -11,7 +11,7 @@ import { humanError, uctCoinId } from '../lib/sphere.js';
  * mint, copy-address, and disconnect.
  */
 export function WalletWidget() {
-  const { phase, error, nametag, address, assets, transport, connect, refreshAssets, disconnect } = useConnect();
+  const { phase, restoring, error, nametag, address, assets, transport, connect, refreshAssets, disconnect } = useConnect();
   const [minting, setMinting] = useState(false);
   const [mintErr, setMintErr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -35,6 +35,21 @@ export function WalletWidget() {
       document.removeEventListener('keydown', onKey);
     };
   }, [open]);
+
+  // Restoring an approved session on load — show a loader pill instead of a flash
+  // of the Connect button while the wallet + user data are fetched.
+  if (restoring && phase !== 'connected') {
+    return (
+      <div className="wallet-widget">
+        <div className="wallet-pill loading" aria-busy="true" aria-label="Restoring wallet">
+          <span className="spinner" />
+          <span className="wallet-pill-id">
+            <span className="wallet-skeleton" aria-hidden="true" />
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   // Not connected yet — the navbar Connect button is the only entry point.
   if (phase !== 'connected') {
