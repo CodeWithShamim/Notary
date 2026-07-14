@@ -200,7 +200,9 @@ export async function sendDmIntent(
 /** Transfer coins to a recipient (e.g. fund escrow). Wallet-confirmed.
  *  `memo` is attached so the notary can correlate the transfer to a deal — it
  *  scans incoming history for a memo naming the dealId (falling back to
- *  amount + timing). Wallets that ignore memos still fund correctly. */
+ *  amount + timing). Wallets that ignore memos still fund correctly.
+ *  The hosted Sphere wallet's `send` intent keys the recipient as `to`;
+ *  `recipient` is sent too so older/embedded wallets that read it keep working. */
 export async function sendIntent(
   client: ConnectClient,
   params: { recipient: string; amount: string; coinId: string; memo?: string },
@@ -214,7 +216,7 @@ export async function sendIntent(
       summary: display?.summary ?? `Send ${params.amount} to ${params.recipient}`,
       detail: display?.detail ?? params.memo,
     },
-    () => client.intent('send', { ...params }),
+    () => client.intent('send', { to: params.recipient, ...params }),
   );
 }
 
