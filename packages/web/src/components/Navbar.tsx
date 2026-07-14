@@ -3,7 +3,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom';
 import { WalletWidget } from './WalletWidget.js';
 import { AgentStatusBadge } from './AgentStatusBadge.js';
 import { ThemeToggle } from './ThemeToggle.js';
-import { HomeIcon, PlusCircleIcon, FileTextIcon, LayersIcon, BotIcon, ScaleIcon } from './Icon.js';
+import { HomeIcon, PlusCircleIcon, FileTextIcon, LayersIcon, BotIcon, BookIcon, ScaleIcon } from './Icon.js';
 
 const LINKS = [
   { to: '/', label: 'Home', end: true, Icon: HomeIcon },
@@ -11,6 +11,7 @@ const LINKS = [
   { to: '/deals', label: 'My deals', end: false, Icon: FileTextIcon },
   { to: '/pools', label: 'Pools', end: false, Icon: LayersIcon },
   { to: '/agent', label: 'Agent', end: false, Icon: BotIcon },
+  { to: '/docs', label: 'Docs', end: false, Icon: BookIcon },
 ];
 
 /**

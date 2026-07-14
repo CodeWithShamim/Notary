@@ -70,6 +70,14 @@ export const BotIcon = (p: IconProps) => (
   </Base>
 );
 
+export const BookIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z" />
+    <path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20v3H6.5A2.5 2.5 0 0 1 4 18.5" />
+    <path d="M9 7.5h7M9 11h7" />
+  </Base>
+);
+
 /* ── Landing feature glyphs ─────────────────────────────────── */
 
 export const KeyIcon = (p: IconProps) => (

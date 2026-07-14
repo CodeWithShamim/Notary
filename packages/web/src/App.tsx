@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, Link, useLocation } from 'react-router-dom';
 import { Navbar } from './components/Navbar.js';
+import { BookIcon } from './components/Icon.js';
 import { SignaturePrompt } from './components/SignaturePrompt.js';
 import { BootLoader } from './components/BootLoader.js';
 import { FileQuestionIcon } from './components/Icon.js';
@@ -12,6 +13,7 @@ import { MyDeals } from './pages/MyDeals.js';
 import { DealDetail } from './pages/DealDetail.js';
 import { AgentStatus } from './pages/AgentStatus.js';
 import { Pools } from './pages/Pools.js';
+import { Docs } from './pages/Docs.js';
 
 export default function App() {
   // Show the boot overlay once per browser tab session.
@@ -41,6 +43,7 @@ export default function App() {
           <Route path="/deals/:dealId" element={<DealDetail />} />
           <Route path="/pools" element={<Pools />} />
           <Route path="/agent" element={<AgentStatus />} />
+          <Route path="/docs" element={<Docs />} />
           <Route path="*" element={<div className="empty"><div className="big"><FileQuestionIcon size={40} /></div>Nothing here.</div>} />
         </Routes>
       </PageTransition>
@@ -51,6 +54,18 @@ export default function App() {
       </footer>
 
       <SignaturePrompt />
+      <DocsFab />
     </div>
+  );
+}
+
+/** Floating docs shortcut, pinned bottom-right. Hidden while on /docs. */
+function DocsFab() {
+  const { pathname } = useLocation();
+  if (pathname === '/docs') return null;
+  return (
+    <Link to="/docs" className="docs-fab" aria-label="Documentation" title="Documentation">
+      <BookIcon size={22} />
+    </Link>
   );
 }
