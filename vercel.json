@@ -3,6 +3,5 @@
   "buildCommand": "npm run build -w @notary/shared && npm run build -w @notary/web",
   "installCommand": "npm install",
   "outputDirectory": "packages/web/dist",
-  "framework": "vite",
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
