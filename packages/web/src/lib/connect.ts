@@ -175,14 +175,15 @@ export async function fetchAssets(client: ConnectClient): Promise<ConnectAsset[]
 }
 
 /** Send a plaintext/JSON DM (e.g. a deal proposal to @notary). Wallet-confirmed.
- *  The hosted Sphere wallet's `dm` intent keys the recipient as `to`; `recipient`
- *  is sent too so older/embedded wallets that read that field keep working. */
+ *  The hosted Sphere wallet's `dm` intent keys the recipient as `to` and the body
+ *  as `message`; `recipient`/`content` are sent too so older/embedded wallets that
+ *  read those fields keep working. */
 export async function sendDmIntent(
   client: ConnectClient,
   recipient: string,
   content: string,
 ): Promise<unknown> {
-  return client.intent('dm', { to: recipient, recipient, content });
+  return client.intent('dm', { to: recipient, recipient, message: content, content });
 }
 
 /** Transfer coins to a recipient (e.g. fund escrow). Wallet-confirmed.

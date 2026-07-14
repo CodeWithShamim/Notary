@@ -5,16 +5,32 @@ import { getConnectClient, mintIntent } from '../lib/connect.js';
 import { humanError, uctCoinId } from '../lib/sphere.js';
 
 /**
- * Header widget for the connected Sphere wallet: identity, live UCT balance,
- * a wallet-confirmed test-token mint, and disconnect.
+ * Header wallet control. When disconnected it's the single Connect button that
+ * opens the wallet's approval UI; once connected it shows identity, live UCT
+ * balance, a wallet-confirmed test-token mint, and disconnect.
  */
 export function WalletWidget() {
-  const { nametag, address, assets, transport, refreshAssets, disconnect } = useConnect();
+  const { phase, error, nametag, address, assets, transport, connect, refreshAssets, disconnect } = useConnect();
   const [minting, setMinting] = useState(false);
   const [mintErr, setMintErr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [hovering, setHovering] = useState(false);
 
   const uct = assets.find((a) => a.symbol === 'UCT');
+
+  // Not connected yet — the navbar Connect button is the only entry point.
+  if (phase !== 'connected') {
+    const connecting = phase === 'connecting';
+    return (
+      <div className="wallet-widget">
+        {phase === 'locked' && <span className="error-text">Wallet locked — reconnect</span>}
+        {phase === 'error' && error && <span className="error-text">{error}</span>}
+        <button className="btn small" onClick={() => void connect()} disabled={connecting} title="Connect your Sphere wallet">
+          {connecting ? <span className="spinner" /> : 'Connect wallet'}
+        </button>
+      </div>
+    );
+  }
 
   const mint = async () => {
     const client = getConnectClient();
