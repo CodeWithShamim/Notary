@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { WalletWidget } from './WalletWidget.js';
+import { AgentStatusBadge } from './AgentStatusBadge.js';
 
 const LINKS = [
   { to: '/', label: 'Home', end: true },
@@ -43,6 +44,10 @@ export function Navbar() {
         ))}
       </nav>
 
+      <div className="topbar-agent">
+        <AgentStatusBadge />
+      </div>
+
       <div className="topbar-wallet">
         <WalletWidget />
       </div>
@@ -68,6 +73,9 @@ export function Navbar() {
             </NavLink>
           ))}
         </nav>
+        <div className="drawer-agent">
+          <AgentStatusBadge />
+        </div>
         <div className="drawer-wallet">
           <WalletWidget />
         </div>
