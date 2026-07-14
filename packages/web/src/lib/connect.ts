@@ -1,5 +1,5 @@
 /**
- * Sphere Connect — dApp side.
+ * Sphere Connect - dApp side.
  *
  * Lets a visitor connect their EXISTING Sphere wallet (extension / hosted app)
  * instead of creating a local one. Keys never leave the wallet: this app only
@@ -27,7 +27,7 @@ import { requestSignature, type SignatureDescriptor } from './signaturePrompt.js
  *  `autoConnect` actually returns so there is a single source of truth. */
 export type ConnectClient = AutoConnectResult['client'];
 
-/** Unicity testnet2 — canonical id is the RootTrustBase networkId (analogous to an EIP-155 chainId). */
+/** Unicity testnet2 - canonical id is the RootTrustBase networkId (analogous to an EIP-155 chainId). */
 export const TESTNET2 = { id: 4, name: 'testnet2' } as const;
 
 /** Where the popup-fallback wallet lives (iframe / extension are auto-detected first). */
@@ -35,7 +35,7 @@ export const WALLET_URL: string =
   import.meta.env.VITE_SPHERE_WALLET_URL ?? 'https://sphere.unicity.network';
 
 /**
- * Least-privilege scopes — exactly what Notary uses, never the full set:
+ * Least-privilege scopes - exactly what Notary uses, never the full set:
  *   identity:read    who connected (nametag / address)
  *   balance:read     show the UCT balance
  *   dm:read          read deal.update / deal.invite DMs from @notary
@@ -68,7 +68,7 @@ let active: AutoConnectResult | null = null;
 
 /**
  * Auto-connect preference (persisted). When enabled, the app silently restores
- * an already-approved session on page load. Defaults to ON — a returning user
+ * an already-approved session on page load. Defaults to ON - a returning user
  * who connected before is reconnected without a click. An explicit disconnect
  * turns it off so the app doesn't immediately reconnect.
  */
@@ -82,7 +82,7 @@ export function setAutoConnectEnabled(enabled: boolean): void {
 
 function dappMetadata() {
   return {
-    name: 'Notary — trustless escrow',
+    name: 'Notary - trustless escrow',
     description: 'Autonomous escrow & arbitration agent on the Unicity network.',
     url: window.location.origin,
     icon: `${window.location.origin}/favicon.svg`,
@@ -109,7 +109,7 @@ function boot(result: AutoConnectResult): ConnectBoot {
  * Connect to the user's Sphere wallet via `autoConnect`.
  *
  * @param silent when true, only restores a session the wallet has ALREADY
- *   approved for this origin and opens NO wallet UI — used for auto-connect on
+ *   approved for this origin and opens NO wallet UI - used for auto-connect on
  *   page load. Returns `null` (instead of throwing) when there is nothing to
  *   silently restore.
  */
@@ -130,7 +130,7 @@ export async function connect(opts: { silent?: boolean } = {}): Promise<ConnectB
     if (!opts.silent) setAutoConnectEnabled(true); // a real connect opts into auto-reconnect
     return boot(result);
   } catch (err) {
-    localStorage.removeItem(SESSION_KEY); // stale/expired session id — don't keep retrying it
+    localStorage.removeItem(SESSION_KEY); // stale/expired session id - don't keep retrying it
     if (opts.silent) return null; // no prior approval → stay disconnected, quietly
     throw err;
   }
@@ -157,11 +157,11 @@ export async function disconnect(): Promise<void> {
 
 // ---- typed operation helpers -------------------------------------------------
 // Reads go through query(); sensitive ops through intent() (the wallet opens its
-// own confirmation UI — this app never sees a key or signs anything itself).
+// own confirmation UI - this app never sees a key or signs anything itself).
 //
 // Every intent is wrapped in `requestSignature` so the app shows a unified
 // "confirm in your wallet" overlay for the in-flight window. It's a pure UX
-// layer — the wallet still does the signing and the promise result is passed
+// layer - the wallet still does the signing and the promise result is passed
 // straight through.
 
 export interface ConnectAsset {
@@ -198,7 +198,7 @@ export async function sendDmIntent(
 }
 
 /** Transfer coins to a recipient (e.g. fund escrow). Wallet-confirmed.
- *  `memo` is attached so the notary can correlate the transfer to a deal — it
+ *  `memo` is attached so the notary can correlate the transfer to a deal - it
  *  scans incoming history for a memo naming the dealId (falling back to
  *  amount + timing). Wallets that ignore memos still fund correctly.
  *  The hosted Sphere wallet's `send` intent keys the recipient as `to`;

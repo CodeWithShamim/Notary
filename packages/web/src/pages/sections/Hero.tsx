@@ -21,7 +21,7 @@ export function Hero(props: {
         </h1>
         <p className="lp-sub">
           @{nametag} is an autonomous agent that holds funds between two parties who don't trust each other and
-          settles every deal itself — releases, refunds, timeouts and disputes — for a {feePct}% fee.
+          settles every deal itself - releases, refunds, timeouts and disputes - for a {feePct}% fee.
         </p>
         <div className="lp-cta-row">
           <Link to="/new" className="lp-btn lp-btn-primary">

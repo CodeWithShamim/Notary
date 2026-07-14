@@ -26,7 +26,7 @@ export function NewDeal() {
       <div className="card" style={{ maxWidth: 560 }}>
         <h2>Your wallet needs a nametag</h2>
         <p className="muted">
-          Deals pay out to nametags — the notary refunds buyers at theirs. Set a nametag in your Sphere wallet,
+          Deals pay out to nametags - the notary refunds buyers at theirs. Set a nametag in your Sphere wallet,
           then reconnect to open a deal.
         </p>
         <a className="btn" href="https://sphere.unicity.network" target="_blank" rel="noreferrer">Open Sphere wallet</a>
@@ -39,11 +39,11 @@ export function NewDeal() {
       <div className="card" style={{ maxWidth: 640 }}>
         <h2>Deal proposed ✓</h2>
         <p className="muted">
-          This exact message was DM'd (NIP-17 encrypted) to @notary — full transparency, no hidden API:
+          This exact message was DM'd (NIP-17 encrypted) to @notary - full transparency, no hidden API:
         </p>
         <pre className="json">{JSON.stringify(JSON.parse(sentPayload), null, 2)}</pre>
         <p className="muted">
-          The notary is inviting the seller now. Watch it appear under <b>My deals</b> — when the seller
+          The notary is inviting the seller now. Watch it appear under <b>My deals</b> - when the seller
           accepts, a payment request will land here for you to fund the escrow.
         </p>
         <button className="btn" onClick={() => nav('/deals')}>Go to my deals</button>
@@ -110,7 +110,7 @@ export function NewDeal() {
         </div>
         <label className="field">
           <span>What is being delivered?</span>
-          <textarea value={deliverable} onChange={(e) => setDeliverable(e.target.value)} placeholder="Logo design — 3 concepts, source files included" />
+          <textarea value={deliverable} onChange={(e) => setDeliverable(e.target.value)} placeholder="Logo design - 3 concepts, source files included" />
         </label>
         <label className="field">
           <span>Delivery window (hours after funding)</span>

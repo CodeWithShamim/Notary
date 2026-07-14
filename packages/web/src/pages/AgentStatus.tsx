@@ -13,7 +13,7 @@ export function AgentStatus() {
         <span className={`badge ${isError ? 'offline' : 'online'}`}>{isError ? '● unreachable' : '● online'}</span>
       </div>
       <p className="sub">
-        Everything below is read from the agent's public, read-only API. There are no write endpoints — all
+        Everything below is read from the agent's public, read-only API. There are no write endpoints - all
         state changes travel over the network itself (DMs, payment requests, group chat). That's the point.
       </p>
 
@@ -40,7 +40,7 @@ export function AgentStatus() {
             <div className="card">
               <h2>Deals by state</h2>
               {Object.keys(status.dealsByState).length === 0 ? (
-                <p className="muted">No deals yet — be the first.</p>
+                <p className="muted">No deals yet - be the first.</p>
               ) : (
                 <table className="clean">
                   <tbody>

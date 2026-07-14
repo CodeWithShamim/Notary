@@ -36,7 +36,7 @@ export function WalletWidget() {
     };
   }, [open]);
 
-  // Restoring an approved session on load — show a loader pill instead of a flash
+  // Restoring an approved session on load - show a loader pill instead of a flash
   // of the Connect button while the wallet + user data are fetched.
   if (restoring && phase !== 'connected') {
     return (
@@ -51,12 +51,12 @@ export function WalletWidget() {
     );
   }
 
-  // Not connected yet — the navbar Connect button is the only entry point.
+  // Not connected yet - the navbar Connect button is the only entry point.
   if (phase !== 'connected') {
     const connecting = phase === 'connecting';
     return (
       <div className="wallet-widget">
-        {phase === 'locked' && <span className="error-text">Wallet locked — reconnect</span>}
+        {phase === 'locked' && <span className="error-text">Wallet locked - reconnect</span>}
         {phase === 'error' && error && <span className="error-text">{error}</span>}
         <button className="btn small" onClick={() => void connect()} disabled={connecting} title="Connect your Sphere wallet">
           {connecting ? <span className="spinner" /> : 'Connect wallet'}
@@ -71,7 +71,7 @@ export function WalletWidget() {
     setMinting(true);
     setMintErr(null);
     try {
-      // No faucet on testnet2 — the wallet self-mints test UCT (100 whole, 18 decimals).
+      // No faucet on testnet2 - the wallet self-mints test UCT (100 whole, 18 decimals).
       await mintIntent(client, { coinId: uctCoinId(), amount: (100n * 10n ** 18n).toString() }, '100 UCT');
       await refreshAssets();
     } catch (err) {

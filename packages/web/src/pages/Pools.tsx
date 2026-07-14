@@ -20,8 +20,8 @@ export function Pools() {
 !pool create 20000 UCT Team pizza fund     # start a pool: 20000 base units each
 !pool join pool_ab12cd                     # you get a payment request in your wallet
 !pool status pool_ab12cd                   # progress
-!pool payout pool_ab12cd @carol            # creator only — pays pot minus 1% fee
-!pool cancel pool_ab12cd                   # creator only — refunds everyone`}</pre>
+!pool payout pool_ab12cd @carol            # creator only - pays pot minus 1% fee
+!pool cancel pool_ab12cd                   # creator only - refunds everyone`}</pre>
       </div>
 
       <h2 style={{ marginTop: 24 }}>Live pools</h2>
@@ -40,7 +40,7 @@ export function Pools() {
                 <td>{human(p.amountEach)} {p.symbol}</td>
                 <td>{p.contributors}/{p.joined}</td>
                 <td><span className={`badge ${p.status === 'open' ? 'FUNDED' : p.status === 'paid_out' ? 'RELEASED' : 'CANCELLED'}`}>{p.status}</span></td>
-                <td className="muted">{p.status === 'open' ? timeLeft(p.deadlineAt) : '—'}</td>
+                <td className="muted">{p.status === 'open' ? timeLeft(p.deadlineAt) : '-'}</td>
               </tr>
             ))}
           </tbody>

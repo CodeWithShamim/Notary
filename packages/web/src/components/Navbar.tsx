@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { WalletWidget } from './WalletWidget.js';
 import { AgentStatusBadge } from './AgentStatusBadge.js';
 
@@ -32,9 +32,9 @@ export function Navbar() {
 
   return (
     <header className="topbar">
-      <div className="wordmark">
+      <Link to="/" className="wordmark" aria-label="Notary home">
         <span className="seal">⚖</span> Notary
-      </div>
+      </Link>
 
       <nav className="mainnav" aria-label="Primary">
         {LINKS.map((l) => (

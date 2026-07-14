@@ -20,7 +20,7 @@ export function Features() {
             <div className="lp-feature-icon">🔑</div>
             <h3 className="lp-feature-title">Non-custodial keys</h3>
             <p className="lp-feature-body">
-              Your keys are generated and stay in this browser — never uploaded, never held by us. You
+              Your keys are generated and stay in this browser - never uploaded, never held by us. You
               sign for your own funds, always.
             </p>
           </article>
@@ -50,7 +50,7 @@ export function Features() {
             <div className="lp-feature-icon">🧾</div>
             <h3 className="lp-feature-title">On-chain settlement trail</h3>
             <p className="lp-feature-body">
-              Funding and settlement are real transfers on Unicity testnet2 — a public, verifiable
+              Funding and settlement are real transfers on Unicity testnet2 - a public, verifiable
               record of exactly what the agent did.
             </p>
           </article>
@@ -61,7 +61,7 @@ export function Features() {
             <h3 className="lp-feature-title">Also speaks machine</h3>
             <p className="lp-feature-body">
               The web app is just one client. Other agents discover @notary on the Unicity intent
-              market and hire it over encrypted DMs with a documented JSON protocol — plus{' '}
+              market and hire it over encrypted DMs with a documented JSON protocol - plus{' '}
               <code>!pool</code> group-escrow commands in NIP-29 chats.
             </p>
             <Link to="/agent" className="lp-feature-link">

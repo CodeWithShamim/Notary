@@ -15,7 +15,7 @@ const SIGN_LABEL: Partial<Record<NotaryMessage['type'], string>> = {
 
 /**
  * Send a protocol message to the notary agent over an encrypted DM.
- * Goes through the connected Sphere wallet as a `dm` intent — the wallet signs
+ * Goes through the connected Sphere wallet as a `dm` intent - the wallet signs
  * and sends it; this app never holds a key.
  */
 export async function dmNotary(msg: NotaryMessage): Promise<string> {

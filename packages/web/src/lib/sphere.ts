@@ -1,7 +1,7 @@
 /**
  * Shared constants and pure helpers.
  *
- * The app no longer runs a wallet in the browser — all wallet state and
+ * The app no longer runs a wallet in the browser - all wallet state and
  * operations go through the user's connected Sphere wallet (see lib/connect.ts).
  * This module keeps only the registry lookup + config that the rest of the UI
  * needs without a wallet instance.

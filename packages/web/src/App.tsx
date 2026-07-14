@@ -25,7 +25,7 @@ export default function App() {
 
       <footer className="muted" style={{ marginTop: 60, borderTop: '1px solid var(--line-strong)', paddingTop: 16 }}>
         Notary runs on Unicity <b>testnet2</b>. Your keys never leave this browser. Escrow decisions are made
-        autonomously by the @notary agent — this site only expresses your intent over encrypted DMs.
+        autonomously by the @notary agent - this site only expresses your intent over encrypted DMs.
       </footer>
 
       <SignaturePrompt />

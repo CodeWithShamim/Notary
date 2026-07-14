@@ -4,11 +4,11 @@
  * Every wallet-confirmed operation goes through the Sphere wallet, which opens
  * its OWN confirmation UI (a popup window / extension panel / iframe). That UI
  * can be easy to miss, so this store lets the dApp render a modern "confirm in
- * your wallet" overlay for the whole in-flight window — the same pattern users
+ * your wallet" overlay for the whole in-flight window - the same pattern users
  * expect from RainbowKit / ConnectKit.
  *
- * It's a tiny external store (subscribe + snapshot) so `connect.ts` — which has
- * no React — can drive it, and a single `<SignaturePrompt />` at the app root
+ * It's a tiny external store (subscribe + snapshot) so `connect.ts` - which has
+ * no React - can drive it, and a single `<SignaturePrompt />` at the app root
  * renders it via `useSyncExternalStore`. Wrap any intent with `requestSignature`
  * and the overlay handles pending → confirmed → declined automatically.
  */
@@ -62,7 +62,7 @@ export function dismissSignature(): void {
 /**
  * Show the "confirm in your wallet" overlay while `run` (a wallet intent) is in
  * flight, then reflect the outcome. Resolves/rejects with exactly what `run`
- * returns so callers are unaffected — this is a transparent UX wrapper.
+ * returns so callers are unaffected - this is a transparent UX wrapper.
  *
  * On success the overlay flashes a confirmation and auto-dismisses; on failure
  * (typically the user declining in the wallet) it shows the reason and waits for

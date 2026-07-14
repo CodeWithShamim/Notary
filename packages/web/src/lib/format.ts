@@ -12,12 +12,12 @@ export function human(amount: string | bigint, decimals = 18): string {
 }
 
 export function shortAddr(addr?: string | null, n = 10): string {
-  if (!addr) return '—';
+  if (!addr) return '-';
   return addr.length <= n * 2 ? addr : `${addr.slice(0, n)}…${addr.slice(-6)}`;
 }
 
 export function timeLeft(deadlineAt: number | null): string {
-  if (!deadlineAt) return '—';
+  if (!deadlineAt) return '-';
   const ms = deadlineAt - Date.now();
   if (ms <= 0) return 'now';
   const h = Math.floor(ms / 3_600_000);

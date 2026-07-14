@@ -5,7 +5,7 @@ type Direction = 'left' | 'right' | 'up';
 /**
  * Scroll-triggered reveal. Renders a wrapper that starts offset + transparent
  * (from the left, right, or below) and slides into place the first time it
- * enters the viewport. Honors `prefers-reduced-motion` — those users get the
+ * enters the viewport. Honors `prefers-reduced-motion` - those users get the
  * final state immediately with no motion.
  */
 export function Reveal({

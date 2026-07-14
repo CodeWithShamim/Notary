@@ -10,7 +10,7 @@ import {
  * The "confirm in your wallet" overlay.
  *
  * Mounted once at the app root, it listens to the signature-prompt store and
- * renders a modern web3-style modal whenever a wallet intent is in flight —
+ * renders a modern web3-style modal whenever a wallet intent is in flight -
  * pending → confirmed → declined. The actual signing still happens in the Sphere
  * wallet's own window; this just makes the request impossible to miss and gives
  * every action (fund / message / mint) a consistent, polished confirmation UX.
@@ -26,7 +26,7 @@ export function SignaturePrompt() {
   return (
     <div
       className="sig-backdrop"
-      // Pending can't be dismissed by clicking away — the wallet is still waiting.
+      // Pending can't be dismissed by clicking away - the wallet is still waiting.
       onMouseDown={pending ? undefined : (e) => e.target === e.currentTarget && dismissSignature()}
       role="dialog"
       aria-modal="true"

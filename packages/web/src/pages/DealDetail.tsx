@@ -101,13 +101,13 @@ export function DealDetail() {
         </div>
       )}
 
-      {/* fund escrow card — the star of the buyer flow */}
+      {/* fund escrow card - the star of the buyer flow */}
       {state === 'AWAITING_FUNDS' && isBuyer && snap && (
         <div className="pay-card">
-          <h2 style={{ marginTop: 0 }}>Fund escrow — pay {human(snap.amount)} {snap.symbol ?? ''}</h2>
+          <h2 style={{ marginTop: 0 }}>Fund escrow - pay {human(snap.amount)} {snap.symbol ?? ''}</h2>
           <p className="muted">
             Your wallet transfers the escrow amount to @notary, tagged with this deal id. Funds stay with the
-            notary until delivery is confirmed, disputed, or timed out — the agent settles on its own either way.
+            notary until delivery is confirmed, disputed, or timed out - the agent settles on its own either way.
             Don't fund and the deal simply expires.
           </p>
           {err && <p className="error-text">{err}</p>}
@@ -145,7 +145,7 @@ export function DealDetail() {
       {/* seller: mark delivered */}
       {state === 'FUNDED' && isSeller && (
         <div className="card">
-          <h2>Escrow is funded — deliver the goods</h2>
+          <h2>Escrow is funded - deliver the goods</h2>
           <label className="field">
             <span>Proof of delivery (optional URL or hash)</span>
             <input value={proof} onChange={(e) => setProof(e.target.value)} placeholder="https://…" />
@@ -212,7 +212,7 @@ export function DealDetail() {
               <li key={i}>
                 <span className="t">{when(e.at)}</span>
                 <b>{e.event}</b>
-                {e.detail && <span className="muted"> — {e.detail}</span>}
+                {e.detail && <span className="muted"> - {e.detail}</span>}
               </li>
             ))}
           </ul>

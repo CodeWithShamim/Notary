@@ -15,7 +15,7 @@ export function AgentStatusBadge() {
   const label = isLoading ? 'checking…' : isError ? 'unreachable' : 'online';
 
   return (
-    <NavLink to="/agent" className="agent-status" title={`Notary agent — ${label}`} aria-label={`Agent status: ${label}`}>
+    <NavLink to="/agent" className="agent-status" title={`Notary agent - ${label}`} aria-label={`Agent status: ${label}`}>
       <span className={`badge ${state} agent-status-pill`}>
         <span className="dot" aria-hidden="true" />
         {data?.identity.nametag ? `@${data.identity.nametag}` : 'Agent'} · {label}

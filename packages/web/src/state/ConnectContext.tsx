@@ -29,7 +29,7 @@ export type ConnectPhase =
   | 'idle' // haven't connected yet
   | 'connecting' // handshake in flight
   | 'connected'
-  | 'locked' // wallet locked / logged out — reconnect needed
+  | 'locked' // wallet locked / logged out - reconnect needed
   | 'error';
 
 export interface StoredDeal {
@@ -52,7 +52,7 @@ interface ConversationPage {
   messages: ConvoMessage[];
 }
 
-// Fields we read off a parsed deal.invite (structural — matches the shared schema).
+// Fields we read off a parsed deal.invite (structural - matches the shared schema).
 interface DealInviteMsg {
   dealId: string;
   buyer: string;
@@ -68,7 +68,7 @@ interface DealInviteMsg {
 
 interface ConnectState {
   phase: ConnectPhase;
-  /** Silent auto-connect is in flight on load — restoring the session + user data. */
+  /** Silent auto-connect is in flight on load - restoring the session + user data. */
   restoring: boolean;
   error: string | null;
   identity: PublicIdentity | null;
@@ -81,7 +81,7 @@ interface ConnectState {
   /** Whether the app silently restores an approved session on load. */
   autoConnect: boolean;
   setAutoConnect: (enabled: boolean) => void;
-  /** Interactive connect — opens the wallet's approval UI. */
+  /** Interactive connect - opens the wallet's approval UI. */
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
   refreshAssets: () => Promise<void>;
@@ -137,7 +137,7 @@ export function ConnectProvider({ children }: { children: ReactNode }) {
     try {
       setAssets(await fetchAssets(client));
     } catch {
-      /* transient — keep the last known list */
+      /* transient - keep the last known list */
     }
   }, []);
 
@@ -172,7 +172,7 @@ export function ConnectProvider({ children }: { children: ReactNode }) {
       // A real deal.update always supersedes a synthetic invite for the same id.
       setDeals({ ...invites, ...updates });
     } catch {
-      /* transient — keep the last known deals */
+      /* transient - keep the last known deals */
     }
   }, []);
 
@@ -228,7 +228,7 @@ export function ConnectProvider({ children }: { children: ReactNode }) {
 
   // Silent auto-connect on load, when enabled. `silent` shows no wallet UI: a
   // returning visitor (already approved this origin) is reconnected without a
-  // click, and a brand-new visitor resolves to null — leaving the Connect
+  // click, and a brand-new visitor resolves to null - leaving the Connect
   // button for the one-time approval. Runs for every transport, popup included.
   useEffect(() => {
     let cancelled = false;
@@ -259,12 +259,12 @@ export function ConnectProvider({ children }: { children: ReactNode }) {
       const result = await connectWallet({ silent: false });
       if (result) {
         applyBoot(result);
-        setAutoConnectState(true); // connectWallet enabled the pref — reflect it
+        setAutoConnectState(true); // connectWallet enabled the pref - reflect it
       } else setPhase('idle');
     } catch (err) {
       const message = humanError(err);
       const raw = err instanceof Error ? err.message : String(err);
-      // Closing the popup / cancelling isn't a failure to dwell on — surface it
+      // Closing the popup / cancelling isn't a failure to dwell on - surface it
       // as a dismissible toast and return to idle instead of a stuck error state.
       const cancelled = /popup was closed|closed before connect|USER_REJECTED|rejected/i.test(raw);
       toast(message, 'error');

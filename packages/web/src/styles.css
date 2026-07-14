@@ -30,7 +30,7 @@ body {
   font-family: var(--font-body);
   font-size: 15px;
   line-height: 1.55;
-  /* contain full-bleed landing sections (100vw breakout) — no horizontal scroll */
+  /* contain full-bleed landing sections (100vw breakout) - no horizontal scroll */
   overflow-x: hidden;
 }
 
@@ -52,6 +52,7 @@ code, .mono { font-family: var(--font-mono); font-size: 0.85em; }
   font-size: 26px; letter-spacing: 0.5px; color: var(--text);
   display: flex; align-items: center; gap: 10px;
   flex-shrink: 0;
+  text-decoration: none;
 }
 .wordmark .seal {
   width: 34px; height: 34px; border-radius: 50%;
@@ -371,7 +372,7 @@ pre.json {
 .howit .box { padding: 18px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--ink-1); }
 .howit .n { font-family: var(--font-display); font-size: 30px; color: var(--gold); }
 
-/* wallet signature prompt — modern "confirm in your wallet" overlay */
+/* wallet signature prompt - modern "confirm in your wallet" overlay */
 .sig-backdrop {
   position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center;
   padding: 20px; background: #000b; backdrop-filter: blur(3px);
