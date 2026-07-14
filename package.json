@@ -15,6 +15,7 @@
   "scripts": {
     "build": "npm run build -w @notary/shared && npm run build -w @notary/agent && npm run build -w @notary/web",
     "test": "npm run test -w @notary/shared && npm run test -w @notary/agent",
+    "dev": "npm run dev -w @notary/web & npm run dev -w @notary/agent",
     "dev:agent": "npm run dev -w @notary/agent",
     "dev:web": "npm run dev -w @notary/web",
     "typecheck": "npm run typecheck --workspaces --if-present"

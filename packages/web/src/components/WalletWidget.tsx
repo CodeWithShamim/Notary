@@ -1,30 +1,29 @@
 import { useState } from 'react';
-import { parseTokenAmount } from '@unicitylabs/sphere-sdk';
-import { getSphere, humanError, uctCoinId } from '../lib/sphere.js';
 import { human, shortAddr } from '../lib/format.js';
-import { useWallet } from '../state/WalletContext.js';
-import { NametagModal } from './NametagModal.js';
+import { useConnect } from '../state/ConnectContext.js';
+import { getConnectClient, mintIntent } from '../lib/connect.js';
+import { humanError, uctCoinId } from '../lib/sphere.js';
 
+/**
+ * Header widget for the connected Sphere wallet: identity, live UCT balance,
+ * a wallet-confirmed test-token mint, and disconnect.
+ */
 export function WalletWidget() {
-  const { nametag, address, assets, refreshAssets } = useWallet();
+  const { nametag, address, assets, transport, refreshAssets, disconnect } = useConnect();
   const [minting, setMinting] = useState(false);
   const [mintErr, setMintErr] = useState<string | null>(null);
-  const [showTag, setShowTag] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const uct = assets.find((a) => a.symbol === 'UCT');
 
   const mint = async () => {
-    const sphere = getSphere();
-    if (!sphere) return;
+    const client = getConnectClient();
+    if (!client) return;
     setMinting(true);
     setMintErr(null);
     try {
-      // No faucet on testnet2 — wallets self-mint test UCT via the token engine.
-      // Mint 100 whole UCT (decimals-aware) so balances and deals are usable.
-      const decimals = uct?.decimals ?? 18;
-      const res = await sphere.payments.mintFungibleToken(uctCoinId(), parseTokenAmount('100', decimals));
-      if (!res.success) throw new Error(res.error);
+      // No faucet on testnet2 — the wallet self-mints test UCT (100 whole, 18 decimals).
+      await mintIntent(client, { coinId: uctCoinId(), amount: (100n * 10n ** 18n).toString() });
       await refreshAssets();
     } catch (err) {
       setMintErr(humanError(err));
@@ -38,7 +37,7 @@ export function WalletWidget() {
     <div className="wallet-widget">
       <div
         className="wallet-chip"
-        title={address ?? ''}
+        title={`${address ?? ''}${transport ? ` · via ${transport}` : ''}`}
         style={{ cursor: 'pointer' }}
         onClick={() => {
           if (address) {
@@ -50,19 +49,17 @@ export function WalletWidget() {
       >
         <span className="mono">{copied ? 'copied ✓' : shortAddr(address)}</span>
       </div>
-      {nametag ? (
-        <div className="wallet-chip">@{nametag}</div>
-      ) : (
-        <button className="btn small secondary" onClick={() => setShowTag(true)}>Pick a nametag</button>
-      )}
+      {nametag && <div className="wallet-chip">@{nametag}</div>}
       <div className="wallet-chip">
         <span className="bal">{uct ? human(uct.totalAmount, uct.decimals) : '0'}</span> UCT
       </div>
       <button className="btn small" onClick={() => void mint()} disabled={minting} title="Self-mint test UCT (no faucet on testnet2)">
         {minting ? <span className="spinner" /> : 'Get test tokens'}
       </button>
+      <button className="btn small secondary" onClick={() => void disconnect()} title="Disconnect this Sphere wallet">
+        Disconnect
+      </button>
       {mintErr && <span className="error-text">{mintErr}</span>}
-      {showTag && <NametagModal onClose={() => setShowTag(false)} />}
     </div>
   );
 }

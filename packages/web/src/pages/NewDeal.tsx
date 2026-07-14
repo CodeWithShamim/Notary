@@ -3,11 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { parseTokenAmount } from '@unicitylabs/sphere-sdk';
 import { dmNotary } from '../lib/notary.js';
 import { humanError, uctCoinId } from '../lib/sphere.js';
-import { useWallet } from '../state/WalletContext.js';
-import { NametagModal } from '../components/NametagModal.js';
+import { useConnect } from '../state/ConnectContext.js';
 
 export function NewDeal() {
-  const { nametag, assets } = useWallet();
+  const { nametag, assets } = useConnect();
   const nav = useNavigate();
   const [seller, setSeller] = useState('');
   const [amount, setAmount] = useState('');
@@ -17,7 +16,6 @@ export function NewDeal() {
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [sentPayload, setSentPayload] = useState<string | null>(null);
-  const [showTag, setShowTag] = useState(false);
 
   const coins = assets.length ? assets : [];
   const selected = coins.find((a) => a.symbol === coin);
@@ -26,12 +24,12 @@ export function NewDeal() {
   if (!nametag) {
     return (
       <div className="card" style={{ maxWidth: 560 }}>
-        <h2>One thing first: a nametag</h2>
+        <h2>Your wallet needs a nametag</h2>
         <p className="muted">
-          Deals pay out to nametags — the notary refunds buyers at theirs. You need one before opening a deal.
+          Deals pay out to nametags — the notary refunds buyers at theirs. Set a nametag in your Sphere wallet,
+          then reconnect to open a deal.
         </p>
-        <button className="btn" onClick={() => setShowTag(true)}>Register a nametag</button>
-        {showTag && <NametagModal onClose={() => setShowTag(false)} />}
+        <a className="btn" href="https://sphere.unicity.network" target="_blank" rel="noreferrer">Open Sphere wallet</a>
       </div>
     );
   }

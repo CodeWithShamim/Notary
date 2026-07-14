@@ -5,8 +5,8 @@ import { HAPPY_PATH, type DealState } from '@notary/shared';
 import { fetchDealTrail } from '../lib/api.js';
 import { human, timeLeft, when } from '../lib/format.js';
 import { dmNotary } from '../lib/notary.js';
-import { getSphere, humanError } from '../lib/sphere.js';
-import { useWallet } from '../state/WalletContext.js';
+import { humanError } from '../lib/sphere.js';
+import { useConnect } from '../state/ConnectContext.js';
 
 const TERMINAL_LABEL: Partial<Record<string, string>> = {
   RELEASED: 'Released to seller',
@@ -17,7 +17,7 @@ const TERMINAL_LABEL: Partial<Record<string, string>> = {
 
 export function DealDetail() {
   const { dealId = '' } = useParams();
-  const { deals, nametag, paymentRequests, dismissRequest, refreshAssets } = useWallet();
+  const { deals, nametag, fundEscrow } = useConnect();
   const stored = deals[dealId];
   const { data: trail } = useQuery({
     queryKey: ['trail', dealId],
@@ -39,11 +39,6 @@ export function DealDetail() {
 
   const isBuyer = snap?.buyerTag?.toLowerCase() === nametag?.toLowerCase();
   const isSeller = snap?.sellerTag?.toLowerCase() === nametag?.toLowerCase();
-  // Payment-request metadata is dropped on the wire (NOTES §4); the notary puts
-  // the dealId in the request message, so match on that.
-  const request = paymentRequests.find(
-    (r) => r.message?.includes(dealId) || (r.metadata as { dealId?: string } | undefined)?.dealId === dealId,
-  );
 
   const act = async (label: string, fn: () => Promise<unknown>) => {
     setBusy(label);
@@ -107,35 +102,24 @@ export function DealDetail() {
       )}
 
       {/* fund escrow card — the star of the buyer flow */}
-      {request && state === 'AWAITING_FUNDS' && isBuyer && (
+      {state === 'AWAITING_FUNDS' && isBuyer && snap && (
         <div className="pay-card">
-          <h2 style={{ marginTop: 0 }}>Fund escrow — pay {human(request.amount)} {request.symbol}</h2>
+          <h2 style={{ marginTop: 0 }}>Fund escrow — pay {human(snap.amount)} {snap.symbol ?? ''}</h2>
           <p className="muted">
-            @notary requests the escrow amount. Funds stay with the notary until delivery is confirmed,
-            disputed, or timed out — the agent settles on its own either way.
+            Your wallet transfers the escrow amount to @notary, tagged with this deal id. Funds stay with the
+            notary until delivery is confirmed, disputed, or timed out — the agent settles on its own either way.
+            Don't fund and the deal simply expires.
           </p>
           {err && <p className="error-text">{err}</p>}
           <div className="row">
             <button
               className="btn"
               disabled={busy !== null}
-              onClick={() => void act('pay', async () => {
-                await getSphere()!.payments.payPaymentRequest(request.id, `notary deal ${dealId}`);
-                dismissRequest(request.id);
-                await refreshAssets();
-              })}
+              onClick={() => void act('pay', () =>
+                fundEscrow({ dealId, amount: snap.amount, coinId: snap.coinId }),
+              )}
             >
-              {busy === 'pay' ? <span className="spinner" /> : `Pay ${human(request.amount)} ${request.symbol} into escrow`}
-            </button>
-            <button
-              className="btn danger"
-              disabled={busy !== null}
-              onClick={() => void act('rejectpay', async () => {
-                await getSphere()!.payments.rejectPaymentRequest(request.id);
-                dismissRequest(request.id);
-              })}
-            >
-              Decline
+              {busy === 'pay' ? <span className="spinner" /> : `Pay ${human(snap.amount)} ${snap.symbol ?? ''} into escrow`}
             </button>
           </div>
         </div>

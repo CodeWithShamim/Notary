@@ -1,5 +1,5 @@
 import { NavLink, Route, Routes } from 'react-router-dom';
-import { useWallet } from './state/WalletContext.js';
+import { useConnect } from './state/ConnectContext.js';
 import { Onboarding } from './components/Onboarding.js';
 import { WalletWidget } from './components/WalletWidget.js';
 import { Home } from './pages/Home.js';
@@ -10,7 +10,8 @@ import { AgentStatus } from './pages/AgentStatus.js';
 import { Pools } from './pages/Pools.js';
 
 export default function App() {
-  const { phase } = useWallet();
+  const { phase } = useConnect();
+  const connected = phase === 'connected';
 
   return (
     <div className="app">
@@ -18,7 +19,7 @@ export default function App() {
         <div className="wordmark">
           <span className="seal">⚖</span> Notary
         </div>
-        {phase === 'ready' && (
+        {connected && (
           <>
             <nav className="mainnav">
               <NavLink to="/" end className={({ isActive }) => (isActive ? 'active' : '')}>Home</NavLink>
@@ -32,7 +33,7 @@ export default function App() {
         )}
       </header>
 
-      {phase !== 'ready' ? (
+      {!connected ? (
         <Onboarding />
       ) : (
         <Routes>

@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
 import { human, timeLeft } from '../lib/format.js';
-import { useWallet } from '../state/WalletContext.js';
+import { useConnect } from '../state/ConnectContext.js';
 
 export function MyDeals() {
-  const { deals, nametag } = useWallet();
+  const { deals, nametag } = useConnect();
   const list = Object.values(deals).sort((a, b) => b.snapshot.createdAt - a.snapshot.createdAt);
 
   if (list.length === 0) {
