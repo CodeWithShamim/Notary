@@ -21,8 +21,9 @@ import {
   setAutoConnectEnabled,
   type ConnectAsset,
 } from '../lib/connect.js';
-import { NOTARY_TAG } from '../lib/sphere.js';
+import { NOTARY_TAG, humanError } from '../lib/sphere.js';
 import { human } from '../lib/format.js';
+import { useToast } from './ToastContext.js';
 
 export type ConnectPhase =
   | 'idle' // haven't connected yet
@@ -123,6 +124,7 @@ export function ConnectProvider({ children }: { children: ReactNode }) {
   const [transport, setTransport] = useState<string | null>(null);
   const [autoConnect, setAutoConnectState] = useState<boolean>(isAutoConnectEnabled);
   const unwire = useRef<(() => void) | null>(null);
+  const { toast } = useToast();
 
   const setAutoConnect = useCallback((enabled: boolean) => {
     setAutoConnectEnabled(enabled);
@@ -260,10 +262,20 @@ export function ConnectProvider({ children }: { children: ReactNode }) {
         setAutoConnectState(true); // connectWallet enabled the pref — reflect it
       } else setPhase('idle');
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-      setPhase('error');
+      const message = humanError(err);
+      const raw = err instanceof Error ? err.message : String(err);
+      // Closing the popup / cancelling isn't a failure to dwell on — surface it
+      // as a dismissible toast and return to idle instead of a stuck error state.
+      const cancelled = /popup was closed|closed before connect|USER_REJECTED|rejected/i.test(raw);
+      toast(message, 'error');
+      if (cancelled) {
+        setPhase('idle');
+      } else {
+        setError(message);
+        setPhase('error');
+      }
     }
-  }, [applyBoot]);
+  }, [applyBoot, toast]);
 
   const disconnect = useCallback(async () => {
     unwire.current?.();

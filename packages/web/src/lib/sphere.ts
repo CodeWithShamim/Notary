@@ -25,6 +25,9 @@ export function humanError(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
   const code = (err as { code?: number | string } | null)?.code;
   // Sphere Connect rejections carry numeric codes (see ERROR_CODES in the SDK).
+  if (/popup was closed|closed before connect/i.test(msg)) {
+    return 'You closed the wallet window before connecting. Click Connect to try again.';
+  }
   if (code === 4003 || /USER_REJECTED|rejected/i.test(msg)) {
     return 'You rejected the request in your wallet.';
   }
