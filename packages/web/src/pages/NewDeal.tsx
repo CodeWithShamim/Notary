@@ -4,6 +4,7 @@ import { parseTokenAmount } from '@unicitylabs/sphere-sdk';
 import { dmNotary } from '../lib/notary.js';
 import { humanError, uctCoinId } from '../lib/sphere.js';
 import { CheckIcon } from '../components/Icon.js';
+import { PageLayout, AsideCard } from '../components/PageLayout.js';
 import { useConnect } from '../state/ConnectContext.js';
 
 export function NewDeal() {
@@ -82,8 +83,37 @@ export function NewDeal() {
 
   const valid = seller.trim().length >= 3 && amount.trim() !== '' && deliverable.trim().length > 0;
 
+  const aside = (
+    <>
+      <AsideCard title="What happens next">
+        <ol className="aside-steps">
+          <li>
+            <b>You propose</b>
+            <span className="astep-sub">Your intent is DM'd (encrypted) to @notary — nothing on-chain yet.</span>
+          </li>
+          <li>
+            <b>Seller accepts</b>
+            <span className="astep-sub">@notary invites them; they accept or reject the terms.</span>
+          </li>
+          <li>
+            <b>You fund escrow</b>
+            <span className="astep-sub">A payment request lands in your wallet. Funds sit with the notary.</span>
+          </li>
+          <li>
+            <b>Delivery &amp; release</b>
+            <span className="astep-sub">Confirm delivery and the escrow releases to the seller, minus the 1% fee.</span>
+          </li>
+        </ol>
+      </AsideCard>
+      <AsideCard title="Good to know">
+        <p className="aside-note">Your keys never leave this browser — the site only signs and DMs your intent.</p>
+        <p className="aside-note">Don't fund and the deal simply expires. No lock-in.</p>
+      </AsideCard>
+    </>
+  );
+
   return (
-    <div style={{ maxWidth: 640 }}>
+    <PageLayout aside={aside}>
       <h1>Open a deal</h1>
       <p className="sub">
         You're the buyer. The notary invites the seller; once they accept you'll get a payment request to fund
@@ -122,6 +152,6 @@ export function NewDeal() {
           {sending ? <span className="spinner" /> : 'Propose deal to @notary'}
         </button>
       </div>
-    </div>
+    </PageLayout>
   );
 }

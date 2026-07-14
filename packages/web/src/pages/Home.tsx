@@ -5,6 +5,7 @@ import { Hero } from './sections/Hero.js';
 import { HowItWorks } from './sections/HowItWorks.js';
 import { Architecture } from './sections/Architecture.js';
 import { Features } from './sections/Features.js';
+import { Faq } from './sections/Faq.js';
 import { CtaBand } from './sections/CtaBand.js';
 import { Footer } from './sections/Footer.js';
 
@@ -27,6 +28,7 @@ export function Home() {
       <HowItWorks />
       <Architecture />
       <Features />
+      <Faq />
       <CtaBand />
       <Footer />
     </div>

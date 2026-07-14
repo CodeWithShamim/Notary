@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { HAPPY_PATH, type DealState } from '@notary/shared';
 import { fetchDealTrail } from '../lib/api.js';
 import { SearchIcon, CheckIcon, ClockIcon } from '../components/Icon.js';
+import { PageLayout, AsideCard } from '../components/PageLayout.js';
 import { human, timeLeft, when } from '../lib/format.js';
 import { dmNotary } from '../lib/notary.js';
 import { humanError } from '../lib/sphere.js';
@@ -61,21 +62,40 @@ export function DealDetail() {
 
   const events = (snap?.events ?? trail?.events ?? []) as { at: number; event: string; detail?: string }[];
 
+  const role = isBuyer ? 'buyer' : isSeller ? 'seller' : null;
+  const amount = snap?.amount ?? trail?.amount ?? '0';
+  const symbol = snap?.symbol ?? trail?.symbol ?? '';
+  const feePct = (snap?.feeBps ?? trail?.feeBps ?? 100) / 100;
+  const deadline = snap?.deadlineAt ?? trail?.deadlineAt ?? null;
+  const showDeadline = deadline && state !== 'RELEASED' && state !== 'REFUNDED';
+
+  const aside = (
+    <AsideCard title="Deal summary">
+      <div className="aside-kv">
+        {role && (
+          <div className="kv"><span className="k">Your role</span><span className="v"><span className="badge">{role}</span></span></div>
+        )}
+        {snap?.buyerTag && <div className="kv"><span className="k">Buyer</span><span className="v">@{snap.buyerTag}</span></div>}
+        {snap?.sellerTag && <div className="kv"><span className="k">Seller</span><span className="v">@{snap.sellerTag}</span></div>}
+        <div className="kv"><span className="k">Amount</span><span className="v gold">{human(amount)} {symbol}</span></div>
+        <div className="kv"><span className="k">Notary fee</span><span className="v">{feePct}%</span></div>
+        {showDeadline && (
+          <div className="kv">
+            <span className="k">Time left</span>
+            <span className="v"><ClockIcon size={13} className="inline-ico" /> {timeLeft(deadline)}</span>
+          </div>
+        )}
+      </div>
+    </AsideCard>
+  );
+
   return (
-    <div style={{ maxWidth: 760 }}>
+    <PageLayout aside={aside}>
       <div className="spread">
         <h1 className="mono" style={{ fontSize: 24 }}>{dealId}</h1>
         <span className={`badge ${state}`} style={{ fontSize: 14 }}>{state.replace(/_/g, ' ')}</span>
       </div>
-      <p className="sub" style={{ marginBottom: 8 }}>{snap?.deliverable}</p>
-      <p className="muted">
-        {snap && <>@{snap.buyerTag} (buyer) ⇄ @{snap.sellerTag} (seller) · </>}
-        <b style={{ color: 'var(--gold)' }}>{human(snap?.amount ?? trail?.amount ?? '0')} {snap?.symbol ?? trail?.symbol ?? ''}</b>
-        {' '}· fee {(snap?.feeBps ?? trail?.feeBps ?? 100) / 100}%
-        {(snap?.deadlineAt ?? trail?.deadlineAt) && state !== 'RELEASED' && state !== 'REFUNDED' && (
-          <> · <ClockIcon size={13} className="inline-ico" /> {timeLeft(snap?.deadlineAt ?? trail?.deadlineAt ?? null)} left</>
-        )}
-      </p>
+      <p className="sub" style={{ marginBottom: 18 }}>{snap?.deliverable}</p>
 
       {/* stepper */}
       {stepIndex >= 0 ? (
@@ -224,6 +244,6 @@ export function DealDetail() {
           </p>
         )}
       </div>
-    </div>
+    </PageLayout>
   );
 }

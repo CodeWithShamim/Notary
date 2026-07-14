@@ -2,13 +2,32 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchStatus } from '../lib/api.js';
 import { human, timeLeft } from '../lib/format.js';
 import { InboxIcon } from '../components/Icon.js';
+import { PageLayout, AsideCard } from '../components/PageLayout.js';
 
 export function Pools() {
   const { data: status } = useQuery({ queryKey: ['status'], queryFn: fetchStatus });
   const pools = status?.pools ?? [];
+  const openCount = pools.filter((p) => p.status === 'open').length;
+
+  const aside = (
+    <>
+      <AsideCard title="At a glance">
+        <div className="aside-stats">
+          <div className="aside-stat"><span className="k">Open pools</span><span className="v gold">{openCount}</span></div>
+          <div className="aside-stat"><span className="k">Total tracked</span><span className="v">{pools.length}</span></div>
+        </div>
+      </AsideCard>
+      <AsideCard title="Invite the notary">
+        <p className="aside-note">
+          Pools run inside NIP-29 group chats. DM <code>!pool watch &lt;groupId&gt;</code> to @notary to have it
+          watch yours, then use the commands on the left.
+        </p>
+      </AsideCard>
+    </>
+  );
 
   return (
-    <div>
+    <PageLayout aside={aside}>
       <h1>Group pools</h1>
       <p className="sub">
         Escrow for groups: everyone chips in the same amount inside a NIP-29 group chat; the creator pays the
@@ -47,6 +66,6 @@ export function Pools() {
           </tbody>
         </table>
       )}
-    </div>
+    </PageLayout>
   );
 }

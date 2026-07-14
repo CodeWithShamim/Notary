@@ -208,6 +208,76 @@ nav.mainnav a.active { color: var(--gold); background: var(--ink-2); }
 .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 @media (max-width: 760px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
 
+/* ── Two-column page: main content (left) + contextual aside (right) ───
+   Reusable shell used by the inner app pages via <PageLayout aside=…>.
+   The aside sticks while the main column scrolls; both stack on narrow
+   screens so the aside falls *below* the primary content on mobile. */
+.page-2col {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 304px;
+  gap: 30px;
+  align-items: start;
+}
+.page-main { min-width: 0; }
+.page-aside {
+  position: sticky; top: 20px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+@media (max-width: 900px) {
+  .page-2col { grid-template-columns: 1fr; gap: 22px; }
+  .page-aside { position: static; }
+}
+
+/* aside cards — lighter than .card, tuned for a quiet sidebar */
+.aside-card {
+  background: var(--ink-1); border: 1px solid var(--line-strong);
+  border-radius: var(--radius); padding: 16px 18px;
+}
+.aside-card + .aside-card { margin-top: 0; }
+.aside-title {
+  font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text-dim); margin: 0 0 12px;
+}
+.aside-note { color: var(--text-dim); font-size: 13px; line-height: 1.5; margin: 0; }
+.aside-note + .aside-note { margin-top: 10px; }
+
+/* numbered step list (e.g. New-deal "what happens next") */
+.aside-steps { list-style: none; margin: 0; padding: 0; counter-reset: astep; }
+.aside-steps li {
+  position: relative; padding: 0 0 16px 34px; counter-increment: astep;
+  font-size: 13.5px; line-height: 1.45; color: var(--text);
+}
+.aside-steps li:last-child { padding-bottom: 0; }
+.aside-steps li::before {
+  content: counter(astep); position: absolute; left: 0; top: -1px;
+  width: 22px; height: 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; font-family: var(--font-display);
+  background: var(--ink-3); color: var(--gold); border: 1px solid var(--gold-dim);
+}
+/* connector line between step bullets */
+.aside-steps li:not(:last-child)::after {
+  content: ''; position: absolute; left: 10.5px; top: 23px; bottom: 6px;
+  width: 1px; background: var(--line-strong);
+}
+.aside-steps li b { color: var(--text); font-weight: 600; }
+.aside-steps li .astep-sub { display: block; color: var(--text-dim); font-size: 12.5px; margin-top: 2px; }
+
+/* key/value summary rows (e.g. deal summary aside) */
+.aside-kv { display: flex; flex-direction: column; gap: 10px; }
+.aside-kv .kv { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.aside-kv .kv .k { color: var(--text-dim); font-size: 12.5px; flex-shrink: 0; }
+.aside-kv .kv .v { color: var(--text); font-size: 13.5px; text-align: right; min-width: 0; word-break: break-word; }
+.aside-kv .kv .v.gold { color: var(--gold); font-weight: 600; }
+
+/* compact stat rows for a sidebar overview */
+.aside-stats { display: flex; flex-direction: column; gap: 2px; }
+.aside-stat { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 7px 0; }
+.aside-stat + .aside-stat { border-top: 1px solid var(--line); }
+.aside-stat .k { color: var(--text-dim); font-size: 13px; }
+.aside-stat .v { color: var(--text); font-size: 15px; font-weight: 600; font-family: var(--font-display); }
+.aside-stat .v.gold { color: var(--gold); }
+
 h1 { font-family: var(--font-display); font-weight: 500; font-size: 30px; margin: 0 0 6px; }
 h2 { font-family: var(--font-display); font-weight: 500; font-size: 21px; margin: 0 0 12px; }
 h3 { font-size: 15px; margin: 0 0 8px; color: var(--text); }

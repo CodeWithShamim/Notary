@@ -2,6 +2,9 @@ import { Link } from 'react-router-dom';
 import { human, timeLeft } from '../lib/format.js';
 import { useConnect } from '../state/ConnectContext.js';
 import { FileTextIcon, ClockIcon } from '../components/Icon.js';
+import { PageLayout, AsideCard } from '../components/PageLayout.js';
+
+const ACTIVE_STATES = new Set(['PROPOSED', 'AWAITING_FUNDS', 'FUNDED', 'DELIVERED_CLAIMED']);
 
 export function MyDeals() {
   const { deals, nametag } = useConnect();
@@ -20,8 +23,29 @@ export function MyDeals() {
     );
   }
 
+  const active = list.filter(({ snapshot: d }) => ACTIVE_STATES.has(d.state)).length;
+  const asBuyer = list.filter(({ snapshot: d }) => d.buyerTag?.toLowerCase() === nametag?.toLowerCase()).length;
+  const asSeller = list.filter(({ snapshot: d }) => d.sellerTag?.toLowerCase() === nametag?.toLowerCase()).length;
+
+  const aside = (
+    <>
+      <AsideCard title="Overview">
+        <div className="aside-stats">
+          <div className="aside-stat"><span className="k">Total deals</span><span className="v">{list.length}</span></div>
+          <div className="aside-stat"><span className="k">Active</span><span className="v gold">{active}</span></div>
+          <div className="aside-stat"><span className="k">As buyer</span><span className="v">{asBuyer}</span></div>
+          <div className="aside-stat"><span className="k">As seller</span><span className="v">{asSeller}</span></div>
+        </div>
+      </AsideCard>
+      <AsideCard>
+        <p className="aside-note">Rows update live as @notary DMs new <code>deal.update</code> snapshots to your wallet.</p>
+        <Link to="/new" className="btn" style={{ marginTop: 14, width: '100%', justifyContent: 'center' }}>Open a new deal</Link>
+      </AsideCard>
+    </>
+  );
+
   return (
-    <div>
+    <PageLayout aside={aside}>
       <h1>My deals</h1>
       <p className="sub">Live state pushed by @notary over encrypted DMs, merged with its public event API.</p>
       {list.map(({ snapshot: d }) => {
@@ -45,6 +69,6 @@ export function MyDeals() {
           </Link>
         );
       })}
-    </div>
+    </PageLayout>
   );
 }
