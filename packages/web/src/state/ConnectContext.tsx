@@ -11,7 +11,6 @@ import {
 import type { PublicIdentity } from '@unicitylabs/sphere-sdk/connect';
 import { parseMessage, type DealSnapshot } from '@notary/shared';
 import {
-  canAutoConnectSilently,
   CONNECT_EVENTS,
   connect as connectWallet,
   disconnect as disconnectWallet,
@@ -219,11 +218,13 @@ export function ConnectProvider({ children }: { children: ReactNode }) {
     [wire, refreshAssets, refreshDeals],
   );
 
-  // Silent auto-connect on load, when enabled (iframe / extension only — popup
-  // would open a window).
+  // Silent auto-connect on load, when enabled. `silent` shows no wallet UI: a
+  // returning visitor (already approved this origin) is reconnected without a
+  // click, and a brand-new visitor resolves to null — leaving the Connect
+  // button for the one-time approval. Runs for every transport, popup included.
   useEffect(() => {
     let cancelled = false;
-    if (isAutoConnectEnabled() && canAutoConnectSilently()) {
+    if (isAutoConnectEnabled()) {
       void (async () => {
         try {
           const result = await connectWallet({ silent: true });

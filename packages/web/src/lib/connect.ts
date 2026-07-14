@@ -12,7 +12,6 @@
  */
 import {
   autoConnect,
-  detectTransport,
   type AutoConnectResult,
 } from '@unicitylabs/sphere-sdk/connect/browser';
 import {
@@ -140,22 +139,6 @@ export function getConnectClient(): ConnectClient | null {
   return active?.client ?? null;
 }
 
-/**
- * Whether a silent (no-UI) auto-connect can be attempted on page load.
- *
- * Only iframe and extension transports can restore an already-approved session
- * without UI. The popup transport ALWAYS opens a window — so we must never fire
- * a "silent" connect that would fall back to it, or the wallet pops up on every
- * load. In popup environments the user connects explicitly via the button.
- */
-export function canAutoConnectSilently(): boolean {
-  try {
-    return detectTransport() !== 'popup';
-  } catch {
-    return false;
-  }
-}
-
 /** Disconnect and clear the resumable session (also closes the popup in popup mode). */
 export async function disconnect(): Promise<void> {
   localStorage.removeItem(SESSION_KEY);
@@ -191,13 +174,15 @@ export async function fetchAssets(client: ConnectClient): Promise<ConnectAsset[]
   return Array.isArray(assets) ? assets : [];
 }
 
-/** Send a plaintext/JSON DM (e.g. a deal proposal to @notary). Wallet-confirmed. */
+/** Send a plaintext/JSON DM (e.g. a deal proposal to @notary). Wallet-confirmed.
+ *  The hosted Sphere wallet's `dm` intent keys the recipient as `to`; `recipient`
+ *  is sent too so older/embedded wallets that read that field keep working. */
 export async function sendDmIntent(
   client: ConnectClient,
   recipient: string,
   content: string,
 ): Promise<unknown> {
-  return client.intent('dm', { recipient, content });
+  return client.intent('dm', { to: recipient, recipient, content });
 }
 
 /** Transfer coins to a recipient (e.g. fund escrow). Wallet-confirmed.

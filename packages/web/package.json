@@ -13,7 +13,7 @@
   "dependencies": {
     "@notary/shared": "*",
     "@tanstack/react-query": "^5.62.0",
-    "@unicitylabs/sphere-sdk": "^0.11.9",
+    "@unicitylabs/sphere-sdk": "^0.11.10",
     "buffer": "^6.0.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

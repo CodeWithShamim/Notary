@@ -40,28 +40,88 @@ code, .mono { font-family: var(--font-mono); font-size: 0.85em; }
 
 /* header */
 .topbar {
-  display: flex; align-items: center; gap: 18px;
-  padding: 18px 0; margin-bottom: 26px;
+  display: flex; align-items: center; gap: 20px;
+  padding: 16px 0; margin-bottom: 26px;
   border-bottom: 1px solid var(--line-strong);
-  flex-wrap: wrap;
+  position: relative;
 }
 .wordmark {
   font-family: var(--font-display);
   font-size: 26px; letter-spacing: 0.5px; color: var(--text);
   display: flex; align-items: center; gap: 10px;
+  flex-shrink: 0;
 }
 .wordmark .seal {
   width: 34px; height: 34px; border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, var(--gold-bright), var(--gold-dim));
   display: inline-flex; align-items: center; justify-content: center;
   color: var(--ink-0); font-size: 18px; box-shadow: 0 0 18px #e2b24e33;
+  flex-shrink: 0;
 }
-nav.mainnav { display: flex; gap: 4px; flex: 1; flex-wrap: wrap; }
+
+/* desktop nav */
+nav.mainnav { display: flex; gap: 2px; flex: 1; align-items: center; }
 nav.mainnav a {
-  color: var(--text-dim); padding: 7px 12px; border-radius: 8px; font-size: 14px;
+  color: var(--text-dim); padding: 7px 13px; border-radius: 8px; font-size: 14px;
+  white-space: nowrap; transition: color .15s, background .15s;
 }
 nav.mainnav a:hover { color: var(--text); background: var(--ink-2); }
 nav.mainnav a.active { color: var(--gold); background: var(--ink-2); }
+
+.topbar-wallet { flex-shrink: 0; }
+
+/* hamburger toggle (hidden on desktop) */
+.nav-toggle {
+  display: none;
+  width: 42px; height: 42px; padding: 0;
+  flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+  background: var(--ink-2); border: 1px solid var(--line-strong); border-radius: 10px;
+  cursor: pointer; flex-shrink: 0;
+}
+.nav-toggle span {
+  display: block; width: 20px; height: 2px; border-radius: 2px;
+  background: var(--text); transition: transform .2s ease, opacity .2s ease;
+}
+.nav-toggle.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.nav-toggle.open span:nth-child(2) { opacity: 0; }
+.nav-toggle.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* mobile drawer (hidden on desktop) */
+.nav-scrim { display: none; }
+.nav-drawer { display: none; }
+
+@media (max-width: 860px) {
+  nav.mainnav, .topbar-wallet { display: none; }
+  .nav-toggle { display: flex; position: relative; z-index: 60; }
+  .topbar { justify-content: space-between; }
+
+  .nav-scrim {
+    display: block; position: fixed; inset: 0; z-index: 40;
+    background: #00000066; backdrop-filter: blur(2px);
+  }
+  .nav-drawer {
+    display: block; position: fixed; top: 0; right: 0; z-index: 50;
+    width: min(320px, 84vw); height: 100%;
+    background: var(--ink-1); border-left: 1px solid var(--line-strong);
+    box-shadow: -18px 0 50px #00000066;
+    padding: 84px 20px 28px;
+    transform: translateX(100%); transition: transform .24s ease;
+    overflow-y: auto;
+  }
+  .nav-drawer.open { transform: translateX(0); }
+  .drawer-nav { display: flex; flex-direction: column; gap: 4px; }
+  .drawer-nav a {
+    color: var(--text-dim); padding: 12px 14px; border-radius: 10px; font-size: 16px;
+  }
+  .drawer-nav a:hover { color: var(--text); background: var(--ink-2); }
+  .drawer-nav a.active { color: var(--gold); background: var(--ink-2); }
+  .drawer-wallet {
+    margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--line-strong);
+  }
+  .drawer-wallet .wallet-widget { flex-direction: column; align-items: stretch; gap: 8px; }
+  .drawer-wallet .wallet-chip { justify-content: center; }
+  .drawer-wallet .btn { justify-content: center; width: 100%; }
+}
 
 /* cards & layout */
 .card {

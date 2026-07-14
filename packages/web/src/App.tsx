@@ -1,7 +1,7 @@
-import { NavLink, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import { useConnect } from './state/ConnectContext.js';
 import { Onboarding } from './components/Onboarding.js';
-import { WalletWidget } from './components/WalletWidget.js';
+import { Navbar } from './components/Navbar.js';
 import { Home } from './pages/Home.js';
 import { NewDeal } from './pages/NewDeal.js';
 import { MyDeals } from './pages/MyDeals.js';
@@ -15,23 +15,15 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="topbar">
-        <div className="wordmark">
-          <span className="seal">⚖</span> Notary
-        </div>
-        {connected && (
-          <>
-            <nav className="mainnav">
-              <NavLink to="/" end className={({ isActive }) => (isActive ? 'active' : '')}>Home</NavLink>
-              <NavLink to="/new" className={({ isActive }) => (isActive ? 'active' : '')}>New deal</NavLink>
-              <NavLink to="/deals" className={({ isActive }) => (isActive ? 'active' : '')}>My deals</NavLink>
-              <NavLink to="/pools" className={({ isActive }) => (isActive ? 'active' : '')}>Pools</NavLink>
-              <NavLink to="/agent" className={({ isActive }) => (isActive ? 'active' : '')}>Agent</NavLink>
-            </nav>
-            <WalletWidget />
-          </>
-        )}
-      </header>
+      {connected ? (
+        <Navbar />
+      ) : (
+        <header className="topbar">
+          <div className="wordmark">
+            <span className="seal">⚖</span> Notary
+          </div>
+        </header>
+      )}
 
       {!connected ? (
         <Onboarding />
