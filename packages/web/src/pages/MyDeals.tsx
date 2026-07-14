@@ -4,10 +4,16 @@ import { useConnect } from '../state/ConnectContext.js';
 import { FileTextIcon, ClockIcon } from '../components/Icon.js';
 import { PageLayout, AsideCard } from '../components/PageLayout.js';
 import { Pagination, usePaginated } from '../components/Pagination.js';
+import { useMeta } from '../lib/meta.js';
 
 const ACTIVE_STATES = new Set(['PROPOSED', 'AWAITING_FUNDS', 'FUNDED', 'DELIVERED_CLAIMED']);
 
 export function MyDeals() {
+  useMeta({
+    title: 'My deals',
+    description:
+      'Track your Notary escrow deals — funding, delivery, and settlement status, reconstructed live from your encrypted @notary conversation.',
+  });
   const { deals, nametag } = useConnect();
   const list = Object.values(deals).sort((a, b) => b.snapshot.createdAt - a.snapshot.createdAt);
   const { page, setPage, pageCount, pageItems, pageSize, total } = usePaginated(list, 10);

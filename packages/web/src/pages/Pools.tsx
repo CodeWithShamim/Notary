@@ -7,6 +7,7 @@ import { human, timeLeft } from '../lib/format.js';
 import { InboxIcon, LayersIcon, CheckIcon, CopyIcon, ClockIcon } from '../components/Icon.js';
 import { PageLayout, AsideCard } from '../components/PageLayout.js';
 import { useConnect } from '../state/ConnectContext.js';
+import { useMeta } from '../lib/meta.js';
 
 type Filter = 'all' | 'open' | 'paid_out' | 'ended';
 
@@ -40,6 +41,11 @@ const COMMANDS: { cmd: string; note: string }[] = [
 ];
 
 export function Pools() {
+  useMeta({
+    title: 'Pools',
+    description:
+      'Crowd-funded escrow pools on Notary — many contributors fund one deal together, with the @notary agent collecting and settling automatically.',
+  });
   const { nametag } = useConnect();
   const { data, isLoading } = useQuery({ queryKey: ['pools'], queryFn: fetchPools, refetchInterval: 15_000 });
   const [filter, setFilter] = useState<Filter>('all');

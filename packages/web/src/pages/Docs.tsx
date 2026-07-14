@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { PageLayout } from '../components/PageLayout.js';
+import { useMeta } from '../lib/meta.js';
 
 /** Table-of-contents entries — id must match a `<section id>` below. */
 const TOC: { id: string; label: string }[] = [
@@ -95,6 +96,11 @@ function useActiveSection(ids: string[]): string {
 }
 
 export function Docs() {
+  useMeta({
+    title: 'Docs',
+    description:
+      'How Notary works — quickstart, core concepts, the escrow deal lifecycle, staged milestones, disputes and arbitration on Unicity.',
+  });
   const active = useActiveSection(TOC.map((t) => t.id));
 
   const aside = (

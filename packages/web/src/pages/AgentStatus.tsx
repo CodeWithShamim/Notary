@@ -1,8 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchProtocol, fetchStatus } from '../lib/api.js';
 import { human, shortAddr, when } from '../lib/format.js';
+import { useMeta } from '../lib/meta.js';
 
 export function AgentStatus() {
+  useMeta({
+    title: 'Agent status',
+    description:
+      'Live status of the @notary escrow agent — protocol parameters, open deals, and settled escrow volume on Unicity testnet2.',
+  });
   const { data: status, isError } = useQuery({ queryKey: ['status'], queryFn: fetchStatus });
   const { data: protocol } = useQuery({ queryKey: ['protocol'], queryFn: fetchProtocol, refetchInterval: false });
 

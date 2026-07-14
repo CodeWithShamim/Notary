@@ -9,6 +9,7 @@ import { humanError, uctCoinId } from '../lib/sphere.js';
 import { human, timeLeft } from '../lib/format.js';
 import { SearchIcon, CheckIcon, ArrowRightIcon, UserIcon, ClockIcon } from '../components/Icon.js';
 import { useConnect } from '../state/ConnectContext.js';
+import { useMeta } from '../lib/meta.js';
 
 /* Real offers carry status open | closed | expired. Map each onto the
    marketplace's visual vocabulary (a coloured dot + label). */
@@ -19,6 +20,11 @@ const STATUS_META: Record<Offer['status'], { label: string; tone: string }> = {
 };
 
 export function Marketplace() {
+  useMeta({
+    title: 'Marketplace',
+    description:
+      'Browse open escrow offers on Notary and hire a seller in one click — every deal is settled by the autonomous @notary agent on Unicity.',
+  });
   const { nametag, assets } = useConnect();
   const nav = useNavigate();
   const qc = useQueryClient();

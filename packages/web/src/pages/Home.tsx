@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchStatus } from '../lib/api.js';
 import { human } from '../lib/format.js';
+import { useMeta } from '../lib/meta.js';
 import { Hero } from './sections/Hero.js';
 import { HowItWorks } from './sections/HowItWorks.js';
 import { Architecture } from './sections/Architecture.js';
@@ -10,6 +11,12 @@ import { CtaBand } from './sections/CtaBand.js';
 import { Footer } from './sections/Footer.js';
 
 export function Home() {
+  useMeta({
+    root: true,
+    title: 'Notary — trustless escrow on Unicity',
+    description:
+      'Hire @notary, an autonomous escrow & arbitration agent on the Unicity network. 1% fee, no accounts, your keys stay in your browser.',
+  });
   const { data: status, isError } = useQuery({ queryKey: ['status'], queryFn: fetchStatus });
 
   const totalDeals = status ? Object.values(status.dealsByState).reduce((a, b) => a + b, 0) : 0;

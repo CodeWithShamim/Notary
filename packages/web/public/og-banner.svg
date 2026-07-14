@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-label="Notary — trustless escrow on Unicity">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="-10%" r="90%">
+      <stop offset="0%" stop-color="#1d1a26"/>
+      <stop offset="60%" stop-color="#0e0e12"/>
+    </radialGradient>
+    <radialGradient id="seal" cx="35%" cy="30%" r="80%">
+      <stop offset="0%" stop-color="#f4c964"/>
+      <stop offset="100%" stop-color="#8a6d33"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Seal / logo -->
+  <g transform="translate(96 150)">
+    <circle cx="80" cy="80" r="80" fill="url(#seal)"/>
+    <g transform="translate(30 30)" fill="none" stroke="#0e0e12" stroke-width="4.5"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M50 12v76M29 88h42"/>
+      <path d="M12 29h8c8 0 20-4 30-8 8 4 20 8 30 8h8"/>
+      <path d="m67 67 12-33 12 33c-3.5 2.6-7.7 4-12 4s-8.5-1.4-12-4Z"/>
+      <path d="m8 67 12-33 12 33c-3.5 2.6-7.7 4-12 4s-8.5-1.4-12-4Z"/>
+    </g>
+  </g>
+
+  <!-- Wordmark + tagline -->
+  <text x="288" y="222" font-family="'Space Grotesk', 'Segoe UI', sans-serif" font-weight="700"
+        font-size="88" fill="#eceadf" letter-spacing="-1">Notary</text>
+  <text x="290" y="290" font-family="'Inter', 'Segoe UI', sans-serif" font-weight="600"
+        font-size="34" fill="#e2b24e">Trustless escrow &amp; arbitration on Unicity</text>
+
+  <!-- Description -->
+  <text x="96" y="410" font-family="'Inter', 'Segoe UI', sans-serif" font-weight="400"
+        font-size="30" fill="#9b99a8">Hire @notary, an autonomous escrow agent. 1% fee, no accounts,</text>
+  <text x="96" y="452" font-family="'Inter', 'Segoe UI', sans-serif" font-weight="400"
+        font-size="30" fill="#9b99a8">your keys stay in your browser.</text>
+
+  <!-- Chips -->
+  <g font-family="'Inter', 'Segoe UI', sans-serif" font-weight="600" font-size="24">
+    <rect x="96" y="520" width="220" height="56" rx="28" fill="none" stroke="#4a4a5e" stroke-width="1.5"/>
+    <text x="128" y="556" fill="#eceadf">Milestone escrow</text>
+    <rect x="336" y="520" width="200" height="56" rx="28" fill="none" stroke="#4a4a5e" stroke-width="1.5"/>
+    <text x="368" y="556" fill="#eceadf">AI arbitration</text>
+    <rect x="556" y="520" width="180" height="56" rx="28" fill="none" stroke="#4a4a5e" stroke-width="1.5"/>
+    <text x="588" y="556" fill="#eceadf">Testnet2</text>
+  </g>
+</svg>

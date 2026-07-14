@@ -5,6 +5,7 @@ import { SearchIcon, ScaleIcon } from '../components/Icon.js';
 import { PageLayout, AsideCard } from '../components/PageLayout.js';
 import { Pagination, usePaginated } from '../components/Pagination.js';
 import { human, when } from '../lib/format.js';
+import { useMeta } from '../lib/meta.js';
 
 function rate(r: Rep): string {
   return r.completionRate === null ? '—' : `${Math.round(r.completionRate * 100)}%`;
@@ -34,6 +35,11 @@ function RepCard({ r }: { r: Rep }) {
 }
 
 export function Reputation() {
+  useMeta({
+    title: 'Reputation',
+    description:
+      'On-chain reputation on Notary — completion rates, disputes and a leaderboard of traders, computed from every deal the @notary agent has settled.',
+  });
   const [tag, setTag] = useState('');
   const [lookup, setLookup] = useState<string | null>(null);
   const board = useQuery({ queryKey: ['leaderboard'], queryFn: fetchLeaderboard });

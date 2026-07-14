@@ -9,6 +9,7 @@ import { fetchReputation, fetchOffer } from '../lib/api.js';
 import { CheckIcon, CloseIcon, PlusCircleIcon } from '../components/Icon.js';
 import { PageLayout, AsideCard } from '../components/PageLayout.js';
 import { useConnect } from '../state/ConnectContext.js';
+import { useMeta } from '../lib/meta.js';
 
 interface MilestoneRow {
   amount: string;
@@ -19,6 +20,11 @@ interface MilestoneRow {
 const emptyRow = (): MilestoneRow => ({ amount: '', deliverable: '', hours: '72' });
 
 export function NewDeal() {
+  useMeta({
+    title: 'New deal',
+    description:
+      'Propose a new milestone escrow deal on Notary. Set the amount, deliverable and deadline — @notary holds the funds and settles autonomously.',
+  });
   const { nametag, assets } = useConnect();
   const nav = useNavigate();
   const [params] = useSearchParams();

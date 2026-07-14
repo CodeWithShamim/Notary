@@ -9,6 +9,7 @@ import { human, timeLeft, when } from '../lib/format.js';
 import { dmNotary } from '../lib/notary.js';
 import { humanError } from '../lib/sphere.js';
 import { useConnect } from '../state/ConnectContext.js';
+import { useMeta } from '../lib/meta.js';
 
 const TERMINAL_LABEL: Partial<Record<string, string>> = {
   RELEASED: 'Released to seller',
@@ -23,6 +24,14 @@ export function DealDetail() {
   const { deals, nametag, fundEscrow, refreshDeals } = useConnect();
   const qc = useQueryClient();
   const stored = deals[dealId];
+  const shortId = dealId ? dealId.slice(0, 8) : '';
+  const metaSnap = stored?.snapshot;
+  useMeta({
+    title: dealId ? `Deal ${shortId}` : 'Deal',
+    description: metaSnap
+      ? `Escrow deal ${shortId} on Notary — ${human(metaSnap.amount)} ${metaSnap.symbol ?? ''} between @${metaSnap.buyerTag} and @${metaSnap.sellerTag}, currently ${metaSnap.state}.`.replace(/\s+/g, ' ').trim()
+      : 'Follow a Notary escrow deal end to end — funding, delivery, settlement and any dispute, all settled by the autonomous @notary agent.',
+  });
   const { data: trail } = useQuery({
     queryKey: ['trail', dealId],
     queryFn: () => fetchDealTrail(dealId),

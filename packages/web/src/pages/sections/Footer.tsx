@@ -24,8 +24,8 @@ const NAV: { heading: string; links: { label: string; to: string; external?: boo
   {
     heading: 'Community',
     links: [
-      { label: 'GitHub', to: 'https://github.com', external: true },
-      { label: 'X / Twitter', to: 'https://x.com', external: true },
+      { label: 'GitHub', to: 'https://github.com/CodeWithShamim/Notary', external: true },
+      { label: 'X / Twitter', to: 'https://x.com/CodeWithShamim', external: true },
       { label: 'Discord', to: 'https://discord.com', external: true },
       { label: 'Status', to: '/agent' },
     ],
