@@ -72,7 +72,7 @@ export function WalletWidget() {
     setMintErr(null);
     try {
       // No faucet on testnet2 — the wallet self-mints test UCT (100 whole, 18 decimals).
-      await mintIntent(client, { coinId: uctCoinId(), amount: (100n * 10n ** 18n).toString() });
+      await mintIntent(client, { coinId: uctCoinId(), amount: (100n * 10n ** 18n).toString() }, '100 UCT');
       await refreshAssets();
     } catch (err) {
       setMintErr(humanError(err));

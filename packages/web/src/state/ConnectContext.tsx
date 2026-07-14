@@ -22,6 +22,7 @@ import {
   type ConnectAsset,
 } from '../lib/connect.js';
 import { NOTARY_TAG } from '../lib/sphere.js';
+import { human } from '../lib/format.js';
 
 export type ConnectPhase =
   | 'idle' // haven't connected yet
@@ -85,7 +86,7 @@ interface ConnectState {
   refreshAssets: () => Promise<void>;
   refreshDeals: () => Promise<void>;
   /** Fund a deal's escrow: a wallet-confirmed transfer to @notary tagged with the dealId. */
-  fundEscrow: (p: { dealId: string; amount: string; coinId: string }) => Promise<void>;
+  fundEscrow: (p: { dealId: string; amount: string; coinId: string; symbol?: string }) => Promise<void>;
 }
 
 const Ctx = createContext<ConnectState | null>(null);
@@ -278,15 +279,24 @@ export function ConnectProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const fundEscrow = useCallback(
-    async (p: { dealId: string; amount: string; coinId: string }) => {
+    async (p: { dealId: string; amount: string; coinId: string; symbol?: string }) => {
       const client = getConnectClient();
       if (!client) throw new Error('Connect your Sphere wallet first.');
-      await sendIntent(client, {
-        recipient: `@${NOTARY_TAG}`,
-        amount: p.amount,
-        coinId: p.coinId,
-        memo: `notary deal ${p.dealId}`,
-      });
+      const amountLabel = `${human(p.amount)} ${p.symbol ?? ''}`.trim();
+      await sendIntent(
+        client,
+        {
+          recipient: `@${NOTARY_TAG}`,
+          amount: p.amount,
+          coinId: p.coinId,
+          memo: `notary deal ${p.dealId}`,
+        },
+        {
+          title: 'Fund escrow',
+          summary: `Transfer ${amountLabel} to @${NOTARY_TAG}`,
+          detail: `Deal ${p.dealId}`,
+        },
+      );
       await refreshAssets();
       await refreshDeals();
     },

@@ -348,3 +348,53 @@ pre.json {
 @media (max-width: 760px) { .howit { grid-template-columns: 1fr; } }
 .howit .box { padding: 18px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--ink-1); }
 .howit .n { font-family: var(--font-display); font-size: 30px; color: var(--gold); }
+
+/* wallet signature prompt — modern "confirm in your wallet" overlay */
+.sig-backdrop {
+  position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center;
+  padding: 20px; background: #000b; backdrop-filter: blur(3px);
+  animation: sig-fade 0.16s ease-out;
+}
+@keyframes sig-fade { from { opacity: 0; } to { opacity: 1; } }
+.sig-card {
+  position: relative; width: 100%; max-width: 380px; text-align: center;
+  background: var(--ink-1); border: 1px solid var(--line-strong); border-radius: 16px;
+  padding: 30px 26px 26px; box-shadow: 0 24px 60px #000a;
+  animation: sig-rise 0.2s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+@keyframes sig-rise { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
+
+.sig-glyph {
+  position: relative; width: 62px; height: 62px; margin: 0 auto 16px;
+  display: flex; align-items: center; justify-content: center;
+}
+.sig-icon {
+  width: 62px; height: 62px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: #e2b24e14; border: 1px solid var(--gold-dim); color: var(--gold); font-size: 26px;
+}
+.sig-card.success .sig-icon { background: #6fce8f18; border-color: #6fce8f66; color: var(--green); }
+.sig-card.error .sig-icon { background: #e07a6a18; border-color: #e07a6a66; color: var(--red); }
+.sig-ring {
+  position: absolute; inset: -5px; border-radius: 50%;
+  border: 2px solid transparent; border-top-color: var(--gold); border-right-color: var(--gold);
+  animation: spin 0.9s linear infinite;
+}
+
+.sig-kind {
+  font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px;
+}
+.sig-title { margin: 0 0 8px; font-size: 19px; }
+.sig-summary { margin: 0; color: var(--text); font-size: 14px; }
+.sig-detail { margin: 4px 0 0; color: var(--text-dim); font-size: 12.5px; font-family: var(--font-mono); }
+
+.sig-status {
+  margin: 18px 0 0; padding-top: 16px; border-top: 1px solid var(--line);
+  color: var(--text-dim); font-size: 13px; line-height: 1.5;
+}
+.sig-dots { display: inline-flex; gap: 4px; margin-right: 8px; vertical-align: middle; }
+.sig-dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); animation: sig-blink 1.2s ease-in-out infinite; }
+.sig-dots i:nth-child(2) { animation-delay: 0.2s; }
+.sig-dots i:nth-child(3) { animation-delay: 0.4s; }
+@keyframes sig-blink { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+.sig-hint { margin: 12px 0 0; color: var(--text-dim); font-size: 12px; line-height: 1.5; }
+.sig-dismiss { margin-top: 20px; width: 100%; }

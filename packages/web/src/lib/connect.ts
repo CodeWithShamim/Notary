@@ -20,6 +20,7 @@ import {
   type PermissionScope,
   type PublicIdentity,
 } from '@unicitylabs/sphere-sdk/connect';
+import { requestSignature, type SignatureDescriptor } from './signaturePrompt.js';
 
 /** The `/connect` and `/connect/browser` entry points each declare their own
  *  `ConnectClient` class (private fields → nominal). Derive the type from what
@@ -157,6 +158,11 @@ export async function disconnect(): Promise<void> {
 // ---- typed operation helpers -------------------------------------------------
 // Reads go through query(); sensitive ops through intent() (the wallet opens its
 // own confirmation UI — this app never sees a key or signs anything itself).
+//
+// Every intent is wrapped in `requestSignature` so the app shows a unified
+// "confirm in your wallet" overlay for the in-flight window. It's a pure UX
+// layer — the wallet still does the signing and the promise result is passed
+// straight through.
 
 export interface ConnectAsset {
   symbol: string;
@@ -182,8 +188,13 @@ export async function sendDmIntent(
   client: ConnectClient,
   recipient: string,
   content: string,
+  /** Human label for the signature overlay, e.g. "Accept deal". Defaults to a generic message prompt. */
+  label?: string,
 ): Promise<unknown> {
-  return client.intent('dm', { to: recipient, recipient, message: content, content });
+  return requestSignature(
+    { kind: 'message', title: label ?? `Message ${recipient}`, summary: `Send an encrypted DM to ${recipient}` },
+    () => client.intent('dm', { to: recipient, recipient, message: content, content }),
+  );
 }
 
 /** Transfer coins to a recipient (e.g. fund escrow). Wallet-confirmed.
@@ -193,14 +204,29 @@ export async function sendDmIntent(
 export async function sendIntent(
   client: ConnectClient,
   params: { recipient: string; amount: string; coinId: string; memo?: string },
+  /** Overrides the overlay's title/summary/detail with deal-aware, human-readable text. */
+  display?: Partial<SignatureDescriptor>,
 ): Promise<unknown> {
-  return client.intent('send', { ...params });
+  return requestSignature(
+    {
+      kind: 'transfer',
+      title: display?.title ?? 'Confirm transfer',
+      summary: display?.summary ?? `Send ${params.amount} to ${params.recipient}`,
+      detail: display?.detail ?? params.memo,
+    },
+    () => client.intent('send', { ...params }),
+  );
 }
 
 /** Self-mint test UCT on testnet2. Wallet-confirmed. */
 export async function mintIntent(
   client: ConnectClient,
   params: { coinId: string; amount: string },
+  /** Human amount for the overlay, e.g. "100 UCT". Falls back to base units. */
+  display?: string,
 ): Promise<unknown> {
-  return client.intent('mint', { ...params });
+  return requestSignature(
+    { kind: 'mint', title: 'Mint test UCT', summary: `Mint ${display ?? params.amount} to your wallet` },
+    () => client.intent('mint', { ...params }),
+  );
 }

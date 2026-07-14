@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom';
 import { Navbar } from './components/Navbar.js';
+import { SignaturePrompt } from './components/SignaturePrompt.js';
 import { Home } from './pages/Home.js';
 import { NewDeal } from './pages/NewDeal.js';
 import { MyDeals } from './pages/MyDeals.js';
@@ -26,6 +27,8 @@ export default function App() {
         Notary runs on Unicity <b>testnet2</b>. Your keys never leave this browser. Escrow decisions are made
         autonomously by the @notary agent — this site only expresses your intent over encrypted DMs.
       </footer>
+
+      <SignaturePrompt />
     </div>
   );
 }

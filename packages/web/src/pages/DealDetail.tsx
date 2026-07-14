@@ -116,7 +116,7 @@ export function DealDetail() {
               className="btn"
               disabled={busy !== null}
               onClick={() => void act('pay', () =>
-                fundEscrow({ dealId, amount: snap.amount, coinId: snap.coinId }),
+                fundEscrow({ dealId, amount: snap.amount, coinId: snap.coinId, symbol: snap.symbol }),
               )}
             >
               {busy === 'pay' ? <span className="spinner" /> : `Pay ${human(snap.amount)} ${snap.symbol ?? ''} into escrow`}
