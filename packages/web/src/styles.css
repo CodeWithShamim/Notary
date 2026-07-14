@@ -119,7 +119,8 @@ nav.mainnav a.active { color: var(--gold); background: var(--ink-2); }
     margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--line-strong);
   }
   .drawer-wallet .wallet-widget { flex-direction: column; align-items: stretch; gap: 8px; }
-  .drawer-wallet .wallet-chip { justify-content: center; }
+  .drawer-wallet .wallet-pill { justify-content: space-between; border-radius: 12px; }
+  .drawer-wallet .wallet-menu { position: static; min-width: 0; margin-top: 4px; box-shadow: none; }
   .drawer-wallet .btn { justify-content: center; width: 100%; }
 }
 
@@ -239,18 +240,63 @@ textarea { resize: vertical; min-height: 80px; }
 .blurred { filter: blur(7px); user-select: none; }
 
 /* wallet widget */
-.wallet-widget { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.wallet-chip {
-  background: var(--ink-2); border: 1px solid var(--line-strong); border-radius: 8px;
-  padding: 6px 12px; font-size: 13px; display: flex; align-items: center; gap: 8px;
+.wallet-widget { position: relative; display: flex; align-items: center; gap: 10px; }
+
+/* trigger pill: balance chip + address chip in one rounded control */
+.wallet-pill {
+  display: inline-flex; align-items: stretch; gap: 0;
+  background: var(--ink-2); border: 1px solid var(--line-strong); border-radius: 999px;
+  padding: 4px; font-size: 13px; color: var(--text); cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
 }
-.wallet-chip .bal { color: var(--gold); font-weight: 600; }
-.wallet-nametag {
-  position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%);
-  background: var(--ink-2); border: 1px solid var(--line-strong); border-radius: 6px;
-  padding: 4px 10px; font-size: 12px; color: var(--gold); white-space: nowrap;
-  z-index: 20; pointer-events: none; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+.wallet-pill:hover, .wallet-pill.open { border-color: var(--gold-dim); }
+.wallet-pill-bal {
+  display: flex; align-items: center; gap: 5px; padding: 4px 12px;
+  white-space: nowrap;
 }
+.wallet-pill-bal .bal { color: var(--gold); font-weight: 600; }
+.wallet-pill-id {
+  display: flex; align-items: center; gap: 7px; padding: 4px 12px 4px 10px;
+  background: var(--ink-3); border-radius: 999px;
+}
+.wallet-avatar {
+  width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+  background: conic-gradient(from 210deg, var(--gold-bright), var(--blue), var(--green), var(--gold-bright));
+}
+.wallet-caret { color: var(--text-dim); transition: transform .18s ease; }
+.wallet-pill.open .wallet-caret { transform: rotate(180deg); }
+
+/* dropdown menu */
+.wallet-menu {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 60;
+  min-width: 250px; padding: 8px;
+  background: var(--ink-1); border: 1px solid var(--line-strong); border-radius: 14px;
+  box-shadow: 0 16px 44px #00000077;
+}
+.wallet-menu-bal {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 10px 12px;
+}
+.wallet-menu-label { font-size: 12px; color: var(--text-dim); margin-bottom: 2px; }
+.wallet-menu-amount { font-size: 18px; font-weight: 600; color: var(--text); }
+.wallet-menu-amount span { font-size: 13px; font-weight: 500; color: var(--text-dim); }
+.wallet-menu-link {
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: var(--gold); font-size: 13px; font-weight: 600; font-family: inherit;
+  display: inline-flex; align-items: center; min-height: 20px;
+}
+.wallet-menu-link:hover:not(:disabled) { color: var(--gold-bright); }
+.wallet-menu-link:disabled { opacity: .6; cursor: default; }
+.wallet-menu-sep { height: 1px; background: var(--line-strong); margin: 2px 0; }
+.wallet-menu-item {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  background: none; border: none; padding: 10px; border-radius: 8px; cursor: pointer;
+  color: var(--text); font-size: 14px; font-family: inherit; text-align: left;
+}
+.wallet-menu-item:hover { background: var(--ink-2); }
+.wallet-menu-item.danger { color: var(--red); }
+.wallet-menu-item svg { color: currentColor; flex-shrink: 0; }
+.wallet-menu-err { padding: 8px 10px 4px; font-size: 12px; color: var(--red); }
 
 /* payment request card */
 .pay-card {

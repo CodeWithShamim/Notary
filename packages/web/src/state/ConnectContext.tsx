@@ -66,6 +66,8 @@ interface DealInviteMsg {
 
 interface ConnectState {
   phase: ConnectPhase;
+  /** Silent auto-connect is in flight on load — restoring the session + user data. */
+  restoring: boolean;
   error: string | null;
   identity: PublicIdentity | null;
   nametag: string | null;
@@ -109,6 +111,9 @@ function syntheticFromInvite(inv: DealInviteMsg, ts: number): DealSnapshot {
 
 export function ConnectProvider({ children }: { children: ReactNode }) {
   const [phase, setPhase] = useState<ConnectPhase>('idle');
+  // Start true when auto-connect is enabled so a returning visitor sees a loader
+  // on refresh rather than a flash of the Connect button before the session restores.
+  const [restoring, setRestoring] = useState<boolean>(isAutoConnectEnabled);
   const [error, setError] = useState<string | null>(null);
   const [identity, setIdentity] = useState<PublicIdentity | null>(null);
   const [assets, setAssets] = useState<ConnectAsset[]>([]);
