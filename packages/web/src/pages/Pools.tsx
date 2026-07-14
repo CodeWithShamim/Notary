@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchStatus } from '../lib/api.js';
 import { human, timeLeft } from '../lib/format.js';
+import { InboxIcon } from '../components/Icon.js';
 
 export function Pools() {
   const { data: status } = useQuery({ queryKey: ['status'], queryFn: fetchStatus });
@@ -26,7 +27,7 @@ export function Pools() {
 
       <h2 style={{ marginTop: 24 }}>Live pools</h2>
       {pools.length === 0 ? (
-        <div className="empty"><div className="big">🫙</div>No pools yet.</div>
+        <div className="empty"><div className="big"><InboxIcon size={40} /></div>No pools yet.</div>
       ) : (
         <table className="clean">
           <thead>

@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { HAPPY_PATH, type DealState } from '@notary/shared';
 import { fetchDealTrail } from '../lib/api.js';
+import { SearchIcon, CheckIcon, ClockIcon } from '../components/Icon.js';
 import { human, timeLeft, when } from '../lib/format.js';
 import { dmNotary } from '../lib/notary.js';
 import { humanError } from '../lib/sphere.js';
@@ -34,7 +35,7 @@ export function DealDetail() {
   // Merge: DM snapshot is richer; the public API trail keeps us honest if DMs lag.
   const state = (snap?.state ?? trail?.state ?? 'PROPOSED') as DealState;
   if (!snap && !trail) {
-    return <div className="empty"><div className="big">🔎</div>Deal {dealId} isn't known to this browser yet.</div>;
+    return <div className="empty"><div className="big"><SearchIcon size={40} /></div>Deal {dealId} isn't known to this browser yet.</div>;
   }
 
   const isBuyer = snap?.buyerTag?.toLowerCase() === nametag?.toLowerCase();
@@ -72,7 +73,7 @@ export function DealDetail() {
         <b style={{ color: 'var(--gold)' }}>{human(snap?.amount ?? trail?.amount ?? '0')} {snap?.symbol ?? trail?.symbol ?? ''}</b>
         {' '}· fee {(snap?.feeBps ?? trail?.feeBps ?? 100) / 100}%
         {(snap?.deadlineAt ?? trail?.deadlineAt) && state !== 'RELEASED' && state !== 'REFUNDED' && (
-          <> · ⏱ {timeLeft(snap?.deadlineAt ?? trail?.deadlineAt ?? null)} left</>
+          <> · <ClockIcon size={13} className="inline-ico" /> {timeLeft(snap?.deadlineAt ?? trail?.deadlineAt ?? null)} left</>
         )}
       </p>
 
@@ -83,7 +84,7 @@ export function DealDetail() {
             <span key={s} style={{ display: 'contents' }}>
               {i > 0 && <span className="step-line" />}
               <span className={`step ${i < stepIndex ? 'done' : i === stepIndex ? 'current' : ''}`}>
-                <span className="dot">{i < stepIndex ? '✓' : i + 1}</span>
+                <span className="dot">{i < stepIndex ? <CheckIcon size={13} /> : i + 1}</span>
                 <span className="lbl">{s.replace(/_/g, ' ')}</span>
               </span>
             </span>
@@ -173,7 +174,7 @@ export function DealDetail() {
           {!showDispute ? (
             <div className="row">
               <button className="btn" disabled={busy !== null} onClick={() => void act('confirm', () => dmNotary({ v: 1, type: 'deal.confirm', dealId }))}>
-                {busy === 'confirm' ? <span className="spinner" /> : 'Confirm delivery ✓'}
+                {busy === 'confirm' ? <span className="spinner" /> : <span className="btn-ico">Confirm delivery <CheckIcon size={16} /></span>}
               </button>
               <button className="btn danger" disabled={busy !== null} onClick={() => setShowDispute(true)}>Dispute…</button>
             </div>

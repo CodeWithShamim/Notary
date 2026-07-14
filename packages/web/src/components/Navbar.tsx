@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { WalletWidget } from './WalletWidget.js';
 import { AgentStatusBadge } from './AgentStatusBadge.js';
+import { ThemeToggle } from './ThemeToggle.js';
+import { HomeIcon, PlusCircleIcon, FileTextIcon, LayersIcon, BotIcon, ScaleIcon } from './Icon.js';
 
 const LINKS = [
-  { to: '/', label: 'Home', end: true },
-  { to: '/new', label: 'New deal', end: false },
-  { to: '/deals', label: 'My deals', end: false },
-  { to: '/pools', label: 'Pools', end: false },
-  { to: '/agent', label: 'Agent', end: false },
+  { to: '/', label: 'Home', end: true, Icon: HomeIcon },
+  { to: '/new', label: 'New deal', end: false, Icon: PlusCircleIcon },
+  { to: '/deals', label: 'My deals', end: false, Icon: FileTextIcon },
+  { to: '/pools', label: 'Pools', end: false, Icon: LayersIcon },
+  { to: '/agent', label: 'Agent', end: false, Icon: BotIcon },
 ];
 
 /**
@@ -33,19 +35,23 @@ export function Navbar() {
   return (
     <header className="topbar">
       <Link to="/" className="wordmark" aria-label="Notary home">
-        <span className="seal">⚖</span> Notary
+        <span className="seal"><ScaleIcon size={20} /></span> Notary
       </Link>
 
       <nav className="mainnav" aria-label="Primary">
-        {LINKS.map((l) => (
-          <NavLink key={l.to} to={l.to} end={l.end} className={({ isActive }) => (isActive ? 'active' : '')}>
-            {l.label}
+        {LINKS.map(({ to, label, end, Icon }) => (
+          <NavLink key={to} to={to} end={end} className={({ isActive }) => (isActive ? 'active' : '')}>
+            <Icon size={17} className="nav-ico" /> {label}
           </NavLink>
         ))}
       </nav>
 
       <div className="topbar-agent">
         <AgentStatusBadge />
+      </div>
+
+      <div className="topbar-theme">
+        <ThemeToggle />
       </div>
 
       <div className="topbar-wallet">
@@ -67,14 +73,18 @@ export function Navbar() {
 
       <div className={`nav-drawer${open ? ' open' : ''}`}>
         <nav className="drawer-nav" aria-label="Mobile">
-          {LINKS.map((l) => (
-            <NavLink key={l.to} to={l.to} end={l.end} className={({ isActive }) => (isActive ? 'active' : '')}>
-              {l.label}
+          {LINKS.map(({ to, label, end, Icon }) => (
+            <NavLink key={to} to={to} end={end} className={({ isActive }) => (isActive ? 'active' : '')}>
+              <Icon size={18} className="nav-ico" /> {label}
             </NavLink>
           ))}
         </nav>
         <div className="drawer-agent">
           <AgentStatusBadge />
+        </div>
+        <div className="drawer-theme">
+          <span className="drawer-theme-label">Theme</span>
+          <ThemeToggle />
         </div>
         <div className="drawer-wallet">
           <WalletWidget />

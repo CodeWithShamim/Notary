@@ -5,6 +5,7 @@ import {
   subscribeSignature,
   type SignatureKind,
 } from '../lib/signaturePrompt.js';
+import { CheckIcon, CloseIcon } from './Icon.js';
 
 /**
  * The "confirm in your wallet" overlay.
@@ -36,7 +37,7 @@ export function SignaturePrompt() {
         <div className="sig-glyph" aria-hidden="true">
           {pending && <span className="sig-ring" />}
           <span className="sig-icon">
-            {success ? '✓' : error ? '✕' : <WalletGlyph kind={req.kind} />}
+            {success ? <CheckIcon size={30} /> : error ? <CloseIcon size={30} /> : <WalletGlyph kind={req.kind} />}
           </span>
         </div>
 

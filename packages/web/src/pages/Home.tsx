@@ -3,8 +3,10 @@ import { fetchStatus } from '../lib/api.js';
 import { human } from '../lib/format.js';
 import { Hero } from './sections/Hero.js';
 import { HowItWorks } from './sections/HowItWorks.js';
+import { Architecture } from './sections/Architecture.js';
 import { Features } from './sections/Features.js';
 import { CtaBand } from './sections/CtaBand.js';
+import { Footer } from './sections/Footer.js';
 
 export function Home() {
   const { data: status, isError } = useQuery({ queryKey: ['status'], queryFn: fetchStatus });
@@ -23,8 +25,10 @@ export function Home() {
         stats={{ deals: totalDeals, volume, pools: status?.pools.length ?? 0 }}
       />
       <HowItWorks />
+      <Architecture />
       <Features />
       <CtaBand />
+      <Footer />
     </div>
   );
 }

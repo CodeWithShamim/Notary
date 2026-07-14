@@ -1,0 +1,328 @@
+/* BootLoader — web3 neon boot sequence for Notary. All classes/keyframes prefixed `boot-`. */
+
+.boot-overlay {
+  --boot-ink: #0e0e12;
+  --boot-gold: #e2b24e;
+  --boot-gold-bright: #f4c964;
+  --boot-cyan: var(--w3-cyan, #22d3ee);
+  --boot-violet: var(--w3-violet, #a855f7);
+  --boot-magenta: var(--w3-magenta, #ec4899);
+
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 34px;
+  background: var(--boot-ink);
+  color: #f4f4f8;
+  overflow: hidden;
+  opacity: 1;
+  transition: opacity 450ms ease;
+  isolation: isolate;
+}
+
+.boot-overlay.boot-leaving {
+  opacity: 0;
+}
+
+/* ---- Backdrop layers ------------------------------------------------ */
+
+.boot-grid,
+.boot-blob,
+.boot-scan {
+  position: absolute;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.boot-grid {
+  inset: -20%;
+  background-image:
+    linear-gradient(to right, rgba(34, 211, 238, 0.09) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(168, 85, 247, 0.09) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 60% 55% at 50% 45%, #000 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 60% 55% at 50% 45%, #000 30%, transparent 75%);
+  animation: boot-grid-drift 18s linear infinite;
+}
+
+.boot-blob {
+  width: 46vmax;
+  height: 46vmax;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.42;
+  mix-blend-mode: screen;
+}
+
+.boot-blob-1 {
+  top: -12%;
+  left: -8%;
+  background: radial-gradient(circle, var(--boot-cyan), transparent 62%);
+  animation: boot-float-a 11s ease-in-out infinite;
+}
+
+.boot-blob-2 {
+  bottom: -16%;
+  right: -10%;
+  background: radial-gradient(circle, var(--boot-violet), transparent 62%);
+  animation: boot-float-b 13s ease-in-out infinite;
+}
+
+.boot-blob-3 {
+  top: 30%;
+  right: 20%;
+  background: radial-gradient(circle, var(--boot-magenta), transparent 64%);
+  opacity: 0.3;
+  animation: boot-float-a 15s ease-in-out infinite reverse;
+}
+
+.boot-scan {
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 3px,
+    rgba(255, 255, 255, 0.025) 4px
+  );
+  animation: boot-scan-move 6s linear infinite;
+}
+
+/* ---- Seal emblem ---------------------------------------------------- */
+
+.boot-emblem {
+  position: relative;
+  width: 168px;
+  height: 168px;
+  display: grid;
+  place-items: center;
+  z-index: 1;
+}
+
+.boot-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  padding: 3px;
+  background: conic-gradient(
+    from 0deg,
+    var(--boot-cyan),
+    var(--boot-violet),
+    var(--boot-magenta),
+    var(--boot-gold-bright),
+    var(--boot-cyan)
+  );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  filter: drop-shadow(0 0 12px rgba(34, 211, 238, 0.55));
+  animation: boot-sweep 3.2s linear infinite;
+  will-change: transform;
+}
+
+.boot-ring-2 {
+  inset: 16px;
+  padding: 1.5px;
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 1.5px), #000 calc(100% - 1.5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 1.5px), #000 calc(100% - 1.5px));
+  opacity: 0.6;
+  animation: boot-sweep 2.1s linear infinite reverse;
+}
+
+.boot-seal {
+  position: relative;
+  font-size: 74px;
+  line-height: 1;
+  color: var(--boot-gold-bright);
+  text-shadow:
+    0 0 14px rgba(244, 201, 100, 0.75),
+    0 0 34px rgba(226, 178, 78, 0.5);
+  animation: boot-pulse 1.9s ease-in-out infinite;
+  will-change: transform, filter;
+}
+
+/* ---- Wordmark ------------------------------------------------------- */
+
+.boot-word {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-display, serif);
+  font-size: clamp(38px, 8vw, 62px);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  color: #fff;
+  text-shadow: 0 0 26px rgba(226, 178, 78, 0.35);
+}
+
+.boot-word::before,
+.boot-word::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  clip-path: inset(0 0 0 0);
+}
+
+.boot-word::before {
+  color: var(--boot-cyan);
+  animation: boot-glitch-a 3.6s steps(2, end) infinite;
+}
+
+.boot-word::after {
+  color: var(--boot-magenta);
+  animation: boot-glitch-b 3.6s steps(2, end) infinite;
+}
+
+/* ---- Status + progress --------------------------------------------- */
+
+.boot-panel {
+  position: relative;
+  z-index: 1;
+  width: min(420px, 76vw);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.boot-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 20px;
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: rgba(226, 178, 78, 0.92);
+}
+
+.boot-status .boot-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--boot-cyan);
+  box-shadow: 0 0 9px var(--boot-cyan);
+  animation: boot-blink 1s steps(2, start) infinite;
+}
+
+.boot-status-line {
+  animation: boot-line-in 320ms ease both;
+}
+
+.boot-bar {
+  position: relative;
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.boot-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--boot-cyan), var(--boot-violet), var(--boot-magenta));
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.7);
+  transition: width 120ms linear;
+  will-change: width;
+}
+
+.boot-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent);
+  transform: translateX(-100%);
+  animation: boot-shimmer 1.3s ease-in-out infinite;
+}
+
+.boot-meta {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono, monospace);
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  color: rgba(244, 244, 248, 0.55);
+}
+
+.boot-pct {
+  color: var(--boot-gold-bright);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Keyframes ------------------------------------------------------ */
+
+@keyframes boot-sweep {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes boot-pulse {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.06); filter: brightness(1.25); }
+}
+
+@keyframes boot-grid-drift {
+  to { transform: translate(44px, 44px); }
+}
+
+@keyframes boot-float-a {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(6%, 8%) scale(1.12); }
+}
+
+@keyframes boot-float-b {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-7%, -6%) scale(1.1); }
+}
+
+@keyframes boot-scan-move {
+  to { transform: translateY(8px); }
+}
+
+@keyframes boot-shimmer {
+  0% { transform: translateX(-100%); }
+  60%, 100% { transform: translateX(220%); }
+}
+
+@keyframes boot-blink {
+  50% { opacity: 0.25; }
+}
+
+@keyframes boot-line-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes boot-glitch-a {
+  0%, 92%, 100% { transform: translate(0, 0); opacity: 0; }
+  93% { transform: translate(-2px, -1px); opacity: 0.65; }
+  96% { transform: translate(2px, 1px); opacity: 0.5; }
+}
+
+@keyframes boot-glitch-b {
+  0%, 92%, 100% { transform: translate(0, 0); opacity: 0; }
+  94% { transform: translate(2px, 1px); opacity: 0.6; }
+  97% { transform: translate(-2px, -1px); opacity: 0.45; }
+}
+
+/* ---- Reduced motion ------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .boot-grid,
+  .boot-blob,
+  .boot-scan,
+  .boot-ring,
+  .boot-ring-2,
+  .boot-seal,
+  .boot-fill::after,
+  .boot-status .boot-dot,
+  .boot-word::before,
+  .boot-word::after {
+    animation: none !important;
+  }
+  .boot-blob { opacity: 0.28; }
+  .boot-word::before,
+  .boot-word::after { opacity: 0; }
+  .boot-fill { transition: width 80ms linear; }
+}

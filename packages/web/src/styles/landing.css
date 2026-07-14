@@ -451,6 +451,185 @@
   color: var(--lp-dim);
 }
 
+/* ── Architecture diagram ─────────────────────────────────────────────
+   Animated SVG that visualises custody flow. Motion is CSS-only (the flow
+   particles ride `offset-path` on the same geometry as the drawn wires) so the
+   reduced-motion guard can silence everything in one place. */
+.lp-arch {
+  position: relative;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: clamp(14px, 3vw, 30px) clamp(10px, 3vw, 30px) clamp(20px, 3vw, 26px);
+  border-radius: 24px;
+  border: 1px solid var(--lp-line);
+  background:
+    radial-gradient(720px 340px at 50% 8%, #6366f118, transparent 62%),
+    linear-gradient(180deg, #ffffff0a, #ffffff02);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 24px 70px #00000047;
+}
+.arch-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  font-family: var(--lp-font-display);
+}
+
+/* connections */
+.arch-wire-base {
+  stroke: var(--lp-line);
+  stroke-width: 2;
+}
+.arch-wire-flow {
+  stroke-width: 2.4;
+  stroke-dasharray: 7 13;
+  opacity: 0.9;
+  animation: arch-dash 1s linear infinite;
+}
+@keyframes arch-dash {
+  to { stroke-dashoffset: -20; }
+}
+
+/* flowing packets */
+.arch-particle {
+  offset-distance: 0%;
+  animation: arch-flow 2.6s cubic-bezier(0.55, 0, 0.45, 1) infinite;
+  filter: drop-shadow(0 0 5px currentColor);
+}
+.arch-particle.p-in { color: #8b5cf6; fill: #c4b5fd; }
+.arch-particle.p-out { color: #22d3ee; fill: #a5f3fc; }
+.arch-particle.p-settle {
+  color: #6366f1;
+  fill: #c7d2fe;
+  animation-duration: 2s;
+}
+@keyframes arch-flow {
+  0%   { offset-distance: 0%; opacity: 0; }
+  12%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { offset-distance: 100%; opacity: 0; }
+}
+
+.arch-wire-label {
+  fill: var(--lp-dim);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.arch-wire-label-v { text-anchor: middle; }
+
+/* nodes */
+.arch-node-bg {
+  fill: var(--lp-panel);
+  stroke: var(--lp-line);
+  stroke-width: 1.5;
+}
+.arch-node { color: var(--lp-cyan); }
+.arch-node-icon { stroke: currentColor; }
+.arch-node-title {
+  fill: var(--lp-text);
+  font-size: 19px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+.arch-node-sub {
+  fill: var(--lp-dim);
+  font-size: 12.5px;
+  text-anchor: middle;
+}
+
+/* central agent hub */
+.arch-hub-core { animation: arch-breathe 3.4s ease-in-out infinite; }
+.arch-hub-stroke { stroke: #c4b5fd66; stroke-width: 1.5; }
+.arch-hub-halo { fill: #6366f120; }
+.arch-hub-ring {
+  fill: none;
+  stroke: url(#arch-wire);
+  stroke-width: 1.4;
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: arch-ripple 3.2s ease-out infinite;
+}
+.arch-hub-ring.r2 { animation-delay: 1.6s; }
+@keyframes arch-ripple {
+  0%   { transform: scale(0.62); opacity: 0.9; }
+  100% { transform: scale(1.15); opacity: 0; }
+}
+@keyframes arch-breathe {
+  0%, 100% { filter: url(#arch-glow) brightness(1); }
+  50%      { filter: url(#arch-glow) brightness(1.16); }
+}
+.arch-hub-glyph {
+  fill: #fff;
+  font-size: 46px;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+.arch-hub-label {
+  fill: #ede9fe;
+  font-size: 15px;
+  font-weight: 700;
+  text-anchor: middle;
+  letter-spacing: 0.01em;
+}
+.arch-hub-caption {
+  fill: var(--lp-dim);
+  font-size: 12.5px;
+  text-anchor: middle;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ledger band */
+.arch-ledger-bg {
+  fill: #ffffff06;
+  stroke: var(--lp-line);
+  stroke-width: 1.5;
+}
+.arch-ledger-label {
+  fill: var(--lp-dim);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.arch-block rect {
+  fill: #6366f114;
+  stroke: url(#arch-ledger);
+  stroke-width: 1.4;
+  animation: arch-mine 3.3s ease-in-out infinite;
+}
+.arch-block line { stroke: var(--lp-line); stroke-width: 2; }
+@keyframes arch-mine {
+  0%, 100% { fill: #6366f114; }
+  50%      { fill: #22d3ee2e; }
+}
+
+/* legend under the diagram */
+.arch-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 26px;
+  margin: clamp(10px, 2vw, 18px) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13.5px;
+  color: var(--lp-dim);
+}
+.arch-legend li { display: inline-flex; align-items: center; gap: 8px; }
+.arch-legend .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  box-shadow: 0 0 8px currentColor;
+}
+.arch-legend .d-in { background: #8b5cf6; color: #8b5cf6; }
+.arch-legend .d-hub { background: #6366f1; color: #6366f1; }
+.arch-legend .d-out { background: #22d3ee; color: #22d3ee; }
+
 /* ── Features grid ────────────────────────────────────────────────── */
 .lp-features {
   display: grid;
@@ -485,6 +664,7 @@
   background: linear-gradient(135deg, #8b5cf62e, #22d3ee22);
   border: 1px solid var(--lp-line);
   box-shadow: inset 0 1px 0 #ffffff1a;
+  color: var(--lp-cyan);
 }
 .lp-feature-title {
   margin: 18px 0 9px;
@@ -536,43 +716,285 @@
 }
 .lp-feature-link:hover { opacity: 0.78; }
 
-/* ── CTA band ─────────────────────────────────────────────────────── */
+/* ── CTA band · web3 connect-modal ────────────────────────────────── */
 .lp-cta {
   position: relative;
   max-width: var(--lp-content);
   margin-inline: auto;
-  padding-block: clamp(56px, 9vw, 104px);
+  padding-block: clamp(64px, 10vw, 120px);
   padding-inline: var(--lp-gutter);
 }
-.lp-cta-card {
+
+/* wrapper carries the animated gradient ring */
+.lp-modal {
   position: relative;
-  overflow: hidden;
-  max-width: 860px;
+  max-width: 660px;
   margin: 0 auto;
-  padding: clamp(40px, 7vw, 76px) clamp(28px, 5vw, 56px);
   border-radius: 26px;
-  text-align: center;
-  border: 1px solid var(--lp-line);
-  background:
-    radial-gradient(700px 380px at 50% -20%, #8b5cf61f, transparent 62%),
-    linear-gradient(180deg, #14131f, #0b0b14);
-  box-shadow: 0 30px 80px #00000077, inset 0 1px 0 #ffffff12;
+  isolation: isolate;
 }
-.lp-cta-card > *:not(.lp-aurora) { position: relative; z-index: 2; }
-.lp-cta-title {
+
+/* rotating conic glow that reads as a live, generated border */
+.lp-modal-ring {
+  position: absolute;
+  inset: -1.5px;
+  z-index: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(
+    from 0deg,
+    var(--lp-violet), var(--lp-indigo), var(--lp-cyan),
+    var(--lp-pink), var(--lp-violet)
+  );
+  /* mask so only the 1.5px frame shows */
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask-composite: exclude;
+  animation: lp-ring-spin 8s linear infinite;
+  opacity: 0.9;
+}
+@keyframes lp-ring-spin {
+  to { transform: rotate(1turn); }
+}
+/* soft bloom cast by the ring */
+.lp-modal::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(60% 90% at 50% 0%, #8b5cf655, transparent 70%),
+              radial-gradient(60% 90% at 50% 100%, #22d3ee40, transparent 70%);
+  filter: blur(34px);
+  opacity: 0.75;
+}
+
+/* the frosted dialog itself */
+.lp-modal-glass {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  border-radius: inherit;
+  background:
+    radial-gradient(120% 100% at 50% 0%, #1a1830 0%, transparent 60%),
+    linear-gradient(180deg, #0f0e1acc, #0a0a12ee);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  box-shadow: inset 0 1px 0 #ffffff14, 0 30px 90px #00000088;
+}
+/* faint dotted texture across the dialog */
+.lp-modal-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: radial-gradient(#ffffff0d 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(80% 80% at 50% 40%, #000 30%, transparent 100%);
+  -webkit-mask-image: radial-gradient(80% 80% at 50% 40%, #000 30%, transparent 100%);
+}
+
+/* titlebar */
+.lp-modal-bar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--lp-line);
+  font-size: 12.5px;
+}
+.lp-modal-dots { display: inline-flex; gap: 7px; }
+.lp-modal-dots i {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: #ffffff1f;
+}
+.lp-modal-dots i:nth-child(1) { background: #ec489988; }
+.lp-modal-dots i:nth-child(2) { background: #f4c96488; }
+.lp-modal-dots i:nth-child(3) { background: #34d39988; }
+.lp-modal-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--lp-font-display);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--lp-text);
+}
+.lp-modal-live {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--lp-green);
+  box-shadow: 0 0 0 0 #34d39966;
+  animation: lp-live 2s ease-out infinite;
+}
+@keyframes lp-live {
+  0% { box-shadow: 0 0 0 0 #34d39966; }
+  70%, 100% { box-shadow: 0 0 0 7px #34d39900; }
+}
+.lp-modal-net {
+  margin-left: auto;
+  font-family: var(--lp-font-body);
+  color: var(--lp-dim);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+
+/* body */
+.lp-modal-body {
+  position: relative;
+  z-index: 1;
+  padding: clamp(34px, 5vw, 52px) clamp(24px, 5vw, 48px) clamp(30px, 4vw, 44px);
+  text-align: center;
+}
+.lp-modal-title {
   margin: 0;
   font-family: var(--lp-font-display);
   font-weight: 700;
-  font-size: clamp(26px, 4.4vw, 46px);
-  line-height: 1.08;
+  font-size: clamp(27px, 4.2vw, 44px);
+  line-height: 1.1;
   letter-spacing: -0.02em;
 }
-.lp-cta-sub {
-  margin: 18px auto 0;
-  max-width: 500px;
-  font-size: clamp(15px, 1.8vw, 18px);
+.lp-modal-sub {
+  margin: 16px auto 0;
+  max-width: 460px;
+  font-size: clamp(14.5px, 1.7vw, 17px);
   color: var(--lp-dim);
 }
+.lp-modal-body .lp-cta-row { margin-top: 30px; }
+
+/* trust chips */
+.lp-modal-trust {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 26px;
+}
+.lp-modal-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--lp-line);
+  background: #ffffff08;
+  font-size: 12.5px;
+  color: var(--lp-dim);
+}
+.lp-modal-tick {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--lp-cyan);
+  box-shadow: 0 0 8px var(--lp-cyan);
+}
+
+/* ── Footer ───────────────────────────────────────────────────────── */
+.lp-footer {
+  position: relative;
+  overflow: hidden;
+  border-top: 1px solid var(--lp-line);
+  background:
+    radial-gradient(900px 420px at 50% 120%, #8b5cf614, transparent 66%),
+    linear-gradient(180deg, transparent, #05050a);
+}
+.lp-footer-inner {
+  position: relative;
+  z-index: 2;
+  max-width: var(--lp-content);
+  margin-inline: auto;
+  padding: clamp(52px, 7vw, 88px) var(--lp-gutter) 0;
+}
+.lp-footer-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.7fr);
+  gap: clamp(36px, 6vw, 80px);
+  padding-bottom: clamp(40px, 6vw, 64px);
+}
+.lp-footer-brand { max-width: 360px; }
+.lp-footer-word {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--lp-font-display);
+  font-weight: 700;
+  font-size: 26px;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+.lp-footer-seal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  font-size: 20px;
+  color: #fff;
+  background: var(--lp-grad);
+  background-size: 160% 160%;
+  box-shadow: 0 6px 22px #6366f155, inset 0 1px 0 #ffffff40;
+}
+.lp-footer-tagline {
+  margin: 20px 0 22px;
+  color: var(--lp-dim);
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+.lp-footer-nav {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(24px, 4vw, 48px);
+}
+.lp-footer-heading {
+  margin: 0 0 16px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lp-dim);
+}
+.lp-footer-col ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.lp-footer-col a {
+  color: var(--lp-text);
+  font-size: 14.5px;
+  text-decoration: none;
+  transition: color .18s ease;
+}
+.lp-footer-col a:hover {
+  color: transparent;
+  background: var(--lp-grad);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.lp-footer-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 28px;
+  padding: 22px 0 40px;
+  border-top: 1px solid var(--lp-line);
+  font-size: 13px;
+  color: var(--lp-dim);
+}
+.lp-footer-legal,
+.lp-footer-chain { margin: 0; }
+.lp-footer-chain { text-align: right; }
 
 /* ── Responsive ───────────────────────────────────────────────────── */
 @media (max-width: 900px) {
@@ -580,6 +1002,9 @@
   .lp-features { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 760px) {
+  /* the diagram is dense; let it scroll rather than shrink text illegibly */
+  .lp-arch { overflow-x: auto; padding-inline: 12px; }
+  .arch-svg { min-width: 640px; }
   .lp-stats { grid-template-columns: 1fr; }
   .lp-steps,
   .lp-features { grid-template-columns: 1fr; }
@@ -587,6 +1012,13 @@
   .lp-cta-row { flex-direction: column; }
   .lp-cta-row .lp-btn { width: 100%; justify-content: center; }
   .lp-status { flex-direction: column; gap: 10px; }
+  .lp-footer-top { grid-template-columns: 1fr; }
+  .lp-footer-brand { max-width: none; }
+  .lp-footer-bottom { flex-direction: column; align-items: flex-start; }
+  .lp-footer-chain { text-align: left; }
+}
+@media (max-width: 480px) {
+  .lp-footer-nav { grid-template-columns: 1fr 1fr; }
 }
 
 /* ── Reduced motion guard ─────────────────────────────────────────── */
@@ -596,9 +1028,20 @@
   .lp-aurora::before,
   .lp-aurora::after,
   .lp-dot,
-  .lp-badge.online i {
+  .lp-badge.online i,
+  .lp-modal-ring,
+  .lp-modal-live,
+  .arch-wire-flow,
+  .arch-particle,
+  .arch-hub-core,
+  .arch-hub-ring,
+  .arch-block rect {
     animation: none !important;
   }
+  /* park a couple of particles mid-wire so the diagram still reads as flow */
+  .arch-particle.p-in { offset-distance: 55%; opacity: 1; }
+  .arch-particle.p-out { offset-distance: 45%; opacity: 1; }
+  .arch-particle.p-settle { offset-distance: 50%; opacity: 1; }
   .landing *,
   .landing *::before,
   .landing *::after {
@@ -639,3 +1082,91 @@
 @media (max-width: 640px) {
   .landing .lp-features > .reveal.span-all { grid-column: auto; }
 }
+
+/* ── Light theme ──────────────────────────────────────────────────────
+   Re-point the palette to warm paper + ink and flip the white-alpha glass
+   fills to dark-alpha so panels read as elevated on a light canvas. The vivid
+   violet→cyan gradient accents are kept — they pop on light too. */
+:root[data-theme='light'] .landing {
+  --lp-panel: #ffffff;
+  --lp-text: #1b1a24;
+  --lp-dim: #5b5968;
+  --lp-line: #1712281a;
+  background:
+    radial-gradient(1200px 640px at 50% -8%, #ece7ff 0%, transparent 62%),
+    radial-gradient(900px 560px at 92% 8%, #e3f0ff 0%, transparent 60%),
+    #f4f1ea;
+}
+:root[data-theme='light'] .landing ::selection { background: #8b5cf633; color: #1b1a24; }
+
+/* aurora blobs get softer so they tint rather than dominate the paper */
+:root[data-theme='light'] .lp-aurora { opacity: 0.5; }
+:root[data-theme='light'] .lp-aurora-soft { opacity: 0.32; }
+
+/* perspective grid → faint dark lines */
+:root[data-theme='light'] .lp-grid-glow {
+  background-image:
+    linear-gradient(to right, #17122810 1px, transparent 1px),
+    linear-gradient(to bottom, #17122810 1px, transparent 1px);
+  opacity: 0.6;
+}
+
+/* glassy chrome: eyebrow, ghost button, offline badge */
+:root[data-theme='light'] .lp-eyebrow { background: #ffffffcc; }
+:root[data-theme='light'] .lp-btn-ghost { background: #ffffffcc; box-shadow: 0 1px 3px #17122812; }
+:root[data-theme='light'] .lp-btn-ghost:hover {
+  background: #ffffff; border-color: #17122826; box-shadow: 0 10px 30px #1712281f;
+}
+:root[data-theme='light'] .lp-badge.offline { background: #ffffffcc; }
+
+/* elevated cards: near-white panels with a soft lift on the warm bg */
+:root[data-theme='light'] .lp-stat,
+:root[data-theme='light'] .lp-step,
+:root[data-theme='light'] .lp-feature {
+  background: #ffffffcc;
+  box-shadow: 0 6px 20px #17122810;
+}
+:root[data-theme='light'] .lp-stat:hover,
+:root[data-theme='light'] .lp-step:hover,
+:root[data-theme='light'] .lp-feature:hover {
+  box-shadow: 0 18px 46px #1712281f, 0 0 26px #6366f114;
+}
+:root[data-theme='light'] .lp-feature-wide {
+  background:
+    radial-gradient(600px 300px at 100% 0%, #22d3ee1c, transparent 60%),
+    #ffffffd6;
+}
+:root[data-theme='light'] .lp-feature-icon {
+  background: linear-gradient(135deg, #8b5cf622, #22d3ee1a);
+  box-shadow: inset 0 1px 0 #ffffff;
+}
+:root[data-theme='light'] .lp-feature-body code { background: #17122810; color: #0e7490; }
+
+/* architecture diagram on paper: elevate the frame, keep the vivid wires */
+:root[data-theme='light'] .lp-arch {
+  background:
+    radial-gradient(720px 340px at 50% 8%, #6366f114, transparent 62%),
+    #ffffffcc;
+  box-shadow: 0 18px 50px #17122814;
+}
+:root[data-theme='light'] .arch-node-bg { fill: #ffffff; }
+:root[data-theme='light'] .arch-ledger-bg { fill: #17122806; }
+:root[data-theme='light'] .arch-hub-stroke { stroke: #6366f155; }
+:root[data-theme='light'] .arch-hub-halo { fill: #6366f118; }
+:root[data-theme='light'] .arch-hub-label { fill: #ffffff; }
+
+/* CTA band · modal */
+:root[data-theme='light'] .lp-modal-glass {
+  background:
+    radial-gradient(120% 100% at 50% 0%, #f3efff 0%, transparent 60%),
+    linear-gradient(180deg, #fffffff2, #fbf9f4f2);
+  box-shadow: inset 0 1px 0 #ffffff, 0 24px 60px #17122822;
+}
+:root[data-theme='light'] .lp-modal::after { opacity: 0.5; }
+:root[data-theme='light'] .lp-modal-ring { opacity: 0.85; }
+:root[data-theme='light'] .lp-modal-glass::before {
+  background-image: radial-gradient(#17122810 1px, transparent 1px);
+}
+:root[data-theme='light'] .lp-modal-dots i { background: #17122814; }
+:root[data-theme='light'] .lp-modal-net { color: #6b6880; }
+:root[data-theme='light'] .lp-modal-chip { background: #17122806; }

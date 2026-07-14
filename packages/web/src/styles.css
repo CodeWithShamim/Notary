@@ -1,6 +1,12 @@
 /* ── Notary design system ─────────────────────────────────────────────
-   Ink + parchment + seal-wax gold. Deliberate, not default-gray. */
-:root {
+   Ink + parchment + seal-wax gold. Deliberate, not default-gray.
+
+   Two themes share one token contract: the dark defaults live on :root, and
+   [data-theme="light"] re-points the same variables at a warm-parchment
+   palette. Components reference tokens only, so they adapt automatically. */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
   --ink-0: #0e0e12;
   --ink-1: #16161d;
   --ink-2: #1e1e28;
@@ -15,17 +21,48 @@
   --green: #6fce8f;
   --red: #e07a6a;
   --blue: #7aa7e0;
+  /* theme-dependent surfaces (referenced instead of hardcoding a dark colour) */
+  --body-bg: radial-gradient(1200px 500px at 50% -10%, #1d1a26 0%, var(--ink-0) 60%);
+  --surface-hover: #34344a;
+  --code-text: #c8d3b8;
+  --pay-card-bg: linear-gradient(180deg, #26200f, var(--ink-1));
+  --scrim: #000000aa;
   --radius: 10px;
   --font-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
   --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 }
 
+/* ── Light theme ──────────────────────────────────────────────────────
+   Warm paper, ink text, a deeper antique gold that stays legible on white. */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --ink-0: #efece2;
+  --ink-1: #ffffff;
+  --ink-2: #f5f1e7;
+  --ink-3: #e8e3d5;
+  --line: #2a26160f;
+  --line-strong: #2a261626;
+  --text: #23212b;
+  --text-dim: #6b6879;
+  --gold: #9a6c17;
+  --gold-bright: #b78324;
+  --gold-dim: #b89355;
+  --green: #2f9d5b;
+  --red: #cb4f3c;
+  --blue: #3f74c2;
+  --body-bg: radial-gradient(1200px 520px at 50% -10%, #fbf7ec 0%, #f0ebdf 60%);
+  --surface-hover: #e2dccd;
+  --code-text: #3c4a2c;
+  --pay-card-bg: linear-gradient(180deg, #fdf6e2, #fffdf8);
+  --scrim: #2a251aaa;
+}
+
 * { box-sizing: border-box; }
 html, body, #root { min-height: 100%; }
 body {
   margin: 0;
-  background: radial-gradient(1200px 500px at 50% -10%, #1d1a26 0%, var(--ink-0) 60%);
+  background: var(--body-bg);
   color: var(--text);
   font-family: var(--font-body);
   font-size: 15px;
@@ -65,9 +102,18 @@ code, .mono { font-family: var(--font-mono); font-size: 0.85em; }
 /* desktop nav */
 nav.mainnav { display: flex; gap: 2px; flex: 1; align-items: center; }
 nav.mainnav a {
+  display: inline-flex; align-items: center; gap: 7px;
   color: var(--text-dim); padding: 7px 13px; border-radius: 8px; font-size: 14px;
   white-space: nowrap; transition: color .15s, background .15s;
 }
+nav.mainnav a .nav-ico { opacity: .7; transition: opacity .15s; }
+nav.mainnav a:hover .nav-ico, nav.mainnav a.active .nav-ico { opacity: 1; }
+
+/* Icons that sit inline with a run of text share its baseline and weight. */
+.inline-ico { vertical-align: -0.15em; }
+.btn-ico, .with-ico { display: inline-flex; align-items: center; gap: 7px; }
+.inline-ico.ok, .with-ico .ok { color: var(--gold); }
+.muted.deadline { display: flex; align-items: center; justify-content: flex-end; gap: 5px; }
 nav.mainnav a:hover { color: var(--text); background: var(--ink-2); }
 nav.mainnav a.active { color: var(--gold); background: var(--ink-2); }
 
@@ -110,7 +156,7 @@ nav.mainnav a.active { color: var(--gold); background: var(--ink-2); }
 .nav-drawer { display: none; }
 
 @media (max-width: 860px) {
-  nav.mainnav, .topbar-wallet, .topbar-agent { display: none; }
+  nav.mainnav, .topbar-wallet, .topbar-agent, .topbar-theme { display: none; }
   .nav-toggle { display: flex; position: relative; z-index: 60; }
   .topbar { justify-content: space-between; }
 
@@ -130,8 +176,11 @@ nav.mainnav a.active { color: var(--gold); background: var(--ink-2); }
   .nav-drawer.open { transform: translateX(0); }
   .drawer-nav { display: flex; flex-direction: column; gap: 4px; }
   .drawer-nav a {
+    display: flex; align-items: center; gap: 11px;
     color: var(--text-dim); padding: 12px 14px; border-radius: 10px; font-size: 16px;
   }
+  .drawer-nav a .nav-ico { opacity: .7; }
+  .drawer-nav a.active .nav-ico { opacity: 1; }
   .drawer-nav a:hover { color: var(--text); background: var(--ink-2); }
   .drawer-nav a.active { color: var(--gold); background: var(--ink-2); }
   .drawer-agent {
@@ -174,7 +223,7 @@ h3 { font-size: 15px; margin: 0 0 8px; color: var(--text); }
 .btn:hover:not(:disabled) { background: var(--gold-bright); transform: translateY(-1px); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .btn.secondary { background: var(--ink-3); color: var(--text); border: 1px solid var(--line-strong); }
-.btn.secondary:hover:not(:disabled) { background: #34344a; }
+.btn.secondary:hover:not(:disabled) { background: var(--surface-hover); }
 .btn.danger { background: transparent; color: var(--red); border: 1px solid #e07a6a55; }
 .btn.danger:hover:not(:disabled) { background: #e07a6a1a; }
 .btn.small { padding: 6px 12px; font-size: 13px; }
@@ -336,7 +385,7 @@ textarea { resize: vertical; min-height: 80px; }
 
 /* payment request card */
 .pay-card {
-  border: 1px solid var(--gold-dim); background: linear-gradient(180deg, #26200f, var(--ink-1));
+  border: 1px solid var(--gold-dim); background: var(--pay-card-bg);
   border-radius: var(--radius); padding: 20px; margin-bottom: 16px;
   box-shadow: 0 0 24px #e2b24e18;
 }
@@ -355,11 +404,12 @@ table.clean td { padding: 8px 10px; border-bottom: 1px solid var(--line); }
 
 pre.json {
   background: var(--ink-0); border: 1px solid var(--line-strong); border-radius: 8px;
-  padding: 14px; font-size: 12px; overflow-x: auto; color: #c8d3b8;
+  padding: 14px; font-size: 12px; overflow-x: auto; color: var(--code-text);
 }
 
 .empty { text-align: center; padding: 48px 20px; color: var(--text-dim); }
-.empty .big { font-size: 34px; margin-bottom: 10px; }
+.empty .big { font-size: 34px; margin-bottom: 12px; line-height: 0; }
+.empty .big svg { color: var(--gold); opacity: .8; }
 
 .spinner {
   width: 18px; height: 18px; border: 2px solid var(--line-strong); border-top-color: var(--gold);
@@ -450,4 +500,68 @@ pre.json {
 @keyframes toast-in { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
 @media (max-width: 560px) {
   .toast-stack { top: auto; bottom: 16px; left: 16px; right: 16px; max-width: none; }
+}
+
+/* ── Theme toggle ─────────────────────────────────────────────────────
+   Sun/moon switch in the navbar. The two glyphs are stacked in one SVG and
+   cross-fade + rotate as `data-theme` flips. */
+.topbar-theme { flex-shrink: 0; }
+.theme-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px; padding: 0;
+  background: var(--ink-2); color: var(--text-dim);
+  border: 1px solid var(--line-strong); border-radius: 999px;
+  cursor: pointer; flex-shrink: 0;
+  transition: color .15s ease, background .15s ease, border-color .15s ease;
+}
+.theme-toggle:hover { color: var(--gold); border-color: var(--gold-dim); }
+.theme-toggle:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.theme-toggle-icon { display: block; overflow: visible; }
+.theme-toggle-icon .tt-sun { fill: currentColor; stroke: currentColor; }
+.theme-toggle-icon .tt-sun line { stroke: currentColor; }
+.theme-toggle-icon .tt-moon { fill: currentColor; }
+/* transform-box so rotation pivots around the glyph's own centre */
+.theme-toggle-icon .tt-sun,
+.theme-toggle-icon .tt-moon {
+  transform-box: fill-box; transform-origin: center;
+  transition: opacity .3s ease, transform .4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+/* dark → show moon, hide sun */
+:root[data-theme='dark'] .theme-toggle-icon .tt-sun { opacity: 0; transform: rotate(-70deg) scale(0.4); }
+:root[data-theme='dark'] .theme-toggle-icon .tt-moon { opacity: 1; transform: none; }
+/* light → show sun, hide moon */
+:root[data-theme='light'] .theme-toggle-icon .tt-sun { opacity: 1; transform: none; }
+:root[data-theme='light'] .theme-toggle-icon .tt-moon { opacity: 0; transform: rotate(70deg) scale(0.4); }
+
+/* drawer row (mobile) */
+.drawer-theme {
+  margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--line-strong);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.drawer-theme-label { color: var(--text-dim); font-size: 14px; }
+
+/* ── Theme-switch transition ──────────────────────────────────────────
+   Preferred path: a circular reveal via the View Transitions API (driven from
+   theme.ts). We disable the default cross-fade and let the new snapshot expand
+   on top of the old one. */
+::view-transition-old(root),
+::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-old(root) { z-index: 1; }
+::view-transition-new(root) { z-index: 9999; }
+
+/* Fallback path (browsers without View Transitions): a brief colour crossfade
+   applied to everything while `data-theme` flips. */
+html.theme-anim,
+html.theme-anim * {
+  transition:
+    background-color .38s ease, color .38s ease,
+    border-color .38s ease, box-shadow .38s ease, fill .38s ease !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation: none !important; }
+  .theme-toggle-icon .tt-sun,
+  .theme-toggle-icon .tt-moon { transition: none; }
 }

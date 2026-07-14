@@ -1,0 +1,133 @@
+/* Page-switch transition — "web3 modern" for Notary.
+   All classes/keyframes are prefixed `ptx-` to avoid global collisions.
+   Animates transform / opacity / filter only (GPU-friendly). */
+
+:root {
+  --ptx-ink: #0e0e12;
+  --ptx-gold: #e2b24e;
+}
+
+/* Content wrapper: re-keyed by pathname so it remounts and replays enter. */
+.ptx-content {
+  animation: ptx-enter 450ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity, filter;
+}
+
+@keyframes ptx-enter {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+/* Full-viewport neon sweep overlay — never blocks interaction. */
+.ptx-sweep {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Diagonal neon light band that wipes across the viewport. */
+.ptx-sweep::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  left: 0;
+  width: 45%;
+  height: 140%;
+  transform: translateX(-160%) skewX(-18deg);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--w3-cyan, #22d3ee) 35%, transparent) 30%,
+    color-mix(in srgb, var(--w3-violet, #a855f7) 55%, transparent) 55%,
+    color-mix(in srgb, var(--w3-magenta, #ec4899) 35%, transparent) 78%,
+    transparent 100%
+  );
+  filter: blur(8px);
+  box-shadow:
+    0 0 40px 6px color-mix(in srgb, var(--w3-cyan, #22d3ee) 30%, transparent),
+    0 0 80px 20px color-mix(in srgb, var(--w3-violet, #a855f7) 20%, transparent);
+  animation: ptx-wipe 620ms cubic-bezier(0.4, 0, 0.1, 1) both;
+}
+
+/* Faint grid/scanline shimmer trailing behind the band. */
+.ptx-sweep::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 3px,
+      color-mix(in srgb, var(--w3-cyan, #22d3ee) 6%, transparent) 3px,
+      color-mix(in srgb, var(--w3-cyan, #22d3ee) 6%, transparent) 4px
+    );
+  opacity: 0;
+  animation: ptx-shimmer 620ms ease-out both;
+}
+
+@keyframes ptx-wipe {
+  0% {
+    transform: translateX(-160%) skewX(-18deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(320%) skewX(-18deg);
+    opacity: 0;
+  }
+}
+
+@keyframes ptx-shimmer {
+  0% {
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Reduced motion: quick opacity fade only, no movement/blur/sweep travel. */
+@media (prefers-reduced-motion: reduce) {
+  .ptx-content {
+    animation: ptx-fade 200ms ease-out both;
+  }
+
+  .ptx-sweep::before {
+    animation: ptx-fade 200ms ease-out both;
+    transform: none;
+    filter: none;
+    box-shadow: none;
+  }
+
+  .ptx-sweep::after {
+    animation: none;
+  }
+
+  @keyframes ptx-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}

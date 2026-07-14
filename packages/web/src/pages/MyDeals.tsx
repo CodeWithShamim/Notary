@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { human, timeLeft } from '../lib/format.js';
 import { useConnect } from '../state/ConnectContext.js';
+import { FileTextIcon, ClockIcon } from '../components/Icon.js';
 
 export function MyDeals() {
   const { deals, nametag } = useConnect();
@@ -9,7 +10,7 @@ export function MyDeals() {
   if (list.length === 0) {
     return (
       <div className="empty">
-        <div className="big">📜</div>
+        <div className="big"><FileTextIcon size={40} /></div>
         <p>No deals yet in this browser.</p>
         <p className="muted">
           Deals appear here live as the notary DMs <code>deal.update</code> snapshots to your wallet.
@@ -38,7 +39,7 @@ export function MyDeals() {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ color: 'var(--gold)', fontWeight: 600 }}>{human(d.amount)} {d.symbol ?? ''}</div>
-                {d.deadlineAt && <div className="muted">⏱ {timeLeft(d.deadlineAt)}</div>}
+                {d.deadlineAt && <div className="muted deadline"><ClockIcon size={14} className="inline-ico" /> {timeLeft(d.deadlineAt)}</div>}
               </div>
             </div>
           </Link>

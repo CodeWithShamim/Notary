@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { parseTokenAmount } from '@unicitylabs/sphere-sdk';
 import { dmNotary } from '../lib/notary.js';
 import { humanError, uctCoinId } from '../lib/sphere.js';
+import { CheckIcon } from '../components/Icon.js';
 import { useConnect } from '../state/ConnectContext.js';
 
 export function NewDeal() {
@@ -37,7 +38,7 @@ export function NewDeal() {
   if (sentPayload) {
     return (
       <div className="card" style={{ maxWidth: 640 }}>
-        <h2>Deal proposed ✓</h2>
+        <h2 className="with-ico">Deal proposed <CheckIcon size={20} className="inline-ico ok" /></h2>
         <p className="muted">
           This exact message was DM'd (NIP-17 encrypted) to @notary - full transparency, no hidden API:
         </p>

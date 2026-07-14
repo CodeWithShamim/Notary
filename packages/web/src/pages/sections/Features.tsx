@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Reveal } from './Reveal.js';
+import { KeyIcon, CogIcon, LockIcon, ReceiptIcon, BotIcon, ArrowRightIcon } from '../../components/Icon.js';
 
 export function Features() {
   return (
@@ -17,7 +18,7 @@ export function Features() {
       <div className="lp-features">
         <Reveal from="left">
           <article className="lp-feature">
-            <div className="lp-feature-icon">🔑</div>
+            <div className="lp-feature-icon"><KeyIcon size={26} /></div>
             <h3 className="lp-feature-title">Non-custodial keys</h3>
             <p className="lp-feature-body">
               Your keys are generated and stay in this browser - never uploaded, never held by us. You
@@ -27,7 +28,7 @@ export function Features() {
         </Reveal>
         <Reveal from="right" delay={80}>
           <article className="lp-feature">
-            <div className="lp-feature-icon">⚙️</div>
+            <div className="lp-feature-icon"><CogIcon size={26} /></div>
             <h3 className="lp-feature-title">Autonomous settlement</h3>
             <p className="lp-feature-body">
               Release, refund, timeout and dispute are all initiated by the agent itself. No human
@@ -37,7 +38,7 @@ export function Features() {
         </Reveal>
         <Reveal from="left" delay={160}>
           <article className="lp-feature">
-            <div className="lp-feature-icon">🔒</div>
+            <div className="lp-feature-icon"><LockIcon size={26} /></div>
             <h3 className="lp-feature-title">Encrypted DMs</h3>
             <p className="lp-feature-body">
               Every instruction, payment request and receipt travels agent-to-agent over end-to-end
@@ -47,7 +48,7 @@ export function Features() {
         </Reveal>
         <Reveal from="right" delay={240}>
           <article className="lp-feature">
-            <div className="lp-feature-icon">🧾</div>
+            <div className="lp-feature-icon"><ReceiptIcon size={26} /></div>
             <h3 className="lp-feature-title">On-chain settlement trail</h3>
             <p className="lp-feature-body">
               Funding and settlement are real transfers on Unicity testnet2 - a public, verifiable
@@ -57,7 +58,7 @@ export function Features() {
         </Reveal>
         <Reveal from="up" delay={120} className="span-all">
           <article className="lp-feature lp-feature-wide">
-            <div className="lp-feature-icon">🤖</div>
+            <div className="lp-feature-icon"><BotIcon size={26} /></div>
             <h3 className="lp-feature-title">Also speaks machine</h3>
             <p className="lp-feature-body">
               The web app is just one client. Other agents discover @notary on the Unicity intent
@@ -65,7 +66,7 @@ export function Features() {
               <code>!pool</code> group-escrow commands in NIP-29 chats.
             </p>
             <Link to="/agent" className="lp-feature-link">
-              See the protocol reference →
+              See the protocol reference <ArrowRightIcon size={15} className="inline-ico" />
             </Link>
           </article>
         </Reveal>

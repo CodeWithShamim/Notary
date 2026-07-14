@@ -1,0 +1,188 @@
+/* ============================================================
+   Notary — Web3 loading primitives
+   All classes prefixed .ldr-  |  all keyframes prefixed ldr-
+   GPU-friendly: transform / opacity / filter only.
+   ============================================================ */
+
+:root {
+  --ldr-ink: #0e0e12;
+  --ldr-gold: #e2b24e;
+  --ldr-cyan: var(--w3-cyan, #22d3ee);
+  --ldr-violet: var(--w3-violet, #a855f7);
+  --ldr-magenta: var(--w3-magenta, #ec4899);
+}
+
+/* ---------- RouteProgressBar ---------- */
+
+.ldr-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 800;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 320ms ease;
+}
+
+.ldr-progress[data-hidden='true'] {
+  opacity: 0;
+}
+
+.ldr-progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  transform: translate3d(-100%, 0, 0);
+  transform-origin: left center;
+  background: linear-gradient(
+    90deg,
+    var(--ldr-cyan),
+    var(--ldr-violet),
+    var(--ldr-magenta),
+    var(--ldr-cyan)
+  );
+  background-size: 300% 100%;
+  animation: ldr-flow 2.2s linear infinite;
+  will-change: transform;
+  transition: transform 200ms ease;
+  box-shadow:
+    0 0 10px rgba(34, 211, 238, 0.55),
+    0 0 20px rgba(168, 85, 247, 0.35);
+}
+
+/* Bright glowing comet head that blooms at the leading edge */
+.ldr-progress-comet {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 90px;
+  transform: translate3d(0, 0, 0);
+  background: linear-gradient(90deg, transparent, #ffffff 85%, #ffffff);
+  filter: blur(0.5px);
+  box-shadow:
+    0 0 8px 2px #ffffff,
+    0 0 18px 4px var(--ldr-magenta),
+    0 0 28px 8px var(--ldr-violet);
+  opacity: 0.9;
+}
+
+@keyframes ldr-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 300% 50%;
+  }
+}
+
+/* ---------- NeonSpinner ---------- */
+
+.ldr-spinner-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.ldr-spinner {
+  position: relative;
+  border-radius: 50%;
+  display: inline-block;
+  background:
+    conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      var(--ldr-cyan) 90deg,
+      var(--ldr-violet) 200deg,
+      var(--ldr-magenta) 300deg,
+      transparent 360deg
+    );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  animation: ldr-spin 0.9s linear infinite;
+  will-change: transform;
+  filter:
+    drop-shadow(0 0 4px var(--ldr-cyan))
+    drop-shadow(0 0 8px var(--ldr-violet));
+}
+
+.ldr-spinner-label {
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--ldr-cyan);
+  text-shadow: 0 0 8px rgba(34, 211, 238, 0.5);
+}
+
+@keyframes ldr-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Skeleton ---------- */
+
+.ldr-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #1e1e28;
+  display: block;
+}
+
+.ldr-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translate3d(-100%, 0, 0);
+  background: linear-gradient(
+    115deg,
+    transparent 20%,
+    rgba(34, 211, 238, 0.12) 40%,
+    rgba(168, 85, 247, 0.18) 50%,
+    rgba(236, 72, 153, 0.12) 60%,
+    transparent 80%
+  );
+  animation: ldr-shimmer 1.6s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes ldr-shimmer {
+  100% {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+/* ---------- Reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .ldr-progress-bar {
+    animation: none;
+    transition: transform 200ms ease;
+  }
+  .ldr-progress-comet {
+    box-shadow: 0 0 8px 2px var(--ldr-cyan);
+  }
+  .ldr-spinner {
+    animation-duration: 1.6s;
+  }
+  .ldr-skeleton::after {
+    animation: ldr-shimmer-fade 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes ldr-shimmer-fade {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: none;
+  }
+  50% {
+    opacity: 0.5;
+    transform: none;
+  }
+}

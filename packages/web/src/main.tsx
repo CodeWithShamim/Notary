@@ -10,6 +10,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App.js';
 import { ToastProvider } from './state/ToastContext.js';
 import { ConnectProvider } from './state/ConnectContext.js';
+import './styles/web3.css';
 import './styles.css';
 import './styles/landing.css';
 

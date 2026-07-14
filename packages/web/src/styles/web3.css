@@ -1,0 +1,21 @@
+/* Shared web3 neon design tokens.
+   These are referenced by the boot/transition/loader components via
+   var(--w3-*, fallback). Kept intentionally minimal — do NOT redefine
+   tokens already owned by styles.css (--ink-*, --gold, --text, fonts, etc.). */
+:root {
+  --w3-cyan: #22d3ee;
+  --w3-violet: #a855f7;
+  --w3-magenta: #ec4899;
+  --w3-blue: #3b82f6;
+}
+
+/* Shared neon utility keyframes. */
+@keyframes w3-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+@keyframes w3-sheen {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}

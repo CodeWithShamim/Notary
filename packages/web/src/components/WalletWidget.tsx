@@ -3,6 +3,7 @@ import { human, shortAddr } from '../lib/format.js';
 import { useConnect } from '../state/ConnectContext.js';
 import { getConnectClient, mintIntent } from '../lib/connect.js';
 import { humanError, uctCoinId } from '../lib/sphere.js';
+import { CheckIcon } from './Icon.js';
 
 /**
  * Header wallet control. When disconnected it's the single Connect button that
@@ -131,7 +132,7 @@ export function WalletWidget() {
               <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.3" />
               <path d="M10.5 5.5V4A1.5 1.5 0 0 0 9 2.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
             </svg>
-            {copied ? 'Copied ✓' : 'Copy address'}
+            {copied ? <span className="btn-ico">Copied <CheckIcon size={14} /></span> : 'Copy address'}
           </button>
 
           <button className="wallet-menu-item danger" onClick={() => void disconnect()} role="menuitem">
