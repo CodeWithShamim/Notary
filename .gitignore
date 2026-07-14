@@ -20,3 +20,4 @@ packages/*/.env
 .DS_Store
 .vscode/
 .idea/
+.agents

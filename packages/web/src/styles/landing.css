@@ -145,12 +145,64 @@
   padding-inline: var(--lp-gutter);
   border-bottom: 1px solid var(--lp-line);
 }
-.lp-hero-inner {
+
+/* ── Animated "living" hero background ────────────────────────────────
+   A slowly rotating conic aurora wash overlaid with diagonal light beams
+   that sweep across the canvas — a video-like backdrop built purely in CSS
+   so there is no asset to load. Sits below the aurora blobs + grid glow. */
+.lp-hero-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background:
+    conic-gradient(
+      from 0deg at 50% 40%,
+      #6366f11f, #22d3ee1a, #ec489916, #8b5cf61f, #3b82f61a, #6366f11f
+    );
+  filter: blur(38px) saturate(1.2);
+  animation: lp-bg-rotate 34s linear infinite;
+  opacity: 0.85;
+}
+@keyframes lp-bg-rotate {
+  to { transform: rotate(360deg) scale(1.35); }
+}
+/* diagonal sweeping beams of light */
+.lp-beam {
+  position: absolute;
+  top: -60%;
+  left: 0;
+  width: 46%;
+  height: 220%;
+  transform: rotate(18deg);
+  background: linear-gradient(90deg, transparent, #ffffff14 45%, #22d3ee22 50%, #ffffff14 55%, transparent);
+  mix-blend-mode: screen;
+  filter: blur(6px);
+  animation: lp-beam-sweep 11s ease-in-out infinite;
+}
+.lp-beam-1 { animation-delay: 0s; }
+.lp-beam-2 { width: 30%; animation-delay: 3.6s; background: linear-gradient(90deg, transparent, #8b5cf622 50%, transparent); }
+.lp-beam-3 { width: 22%; animation-delay: 7.2s; background: linear-gradient(90deg, transparent, #ec489920 50%, transparent); }
+@keyframes lp-beam-sweep {
+  0% { left: -60%; opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { left: 130%; opacity: 0; }
+}
+/* Two-column split: content left, sci-fi agent core right. */
+.lp-hero-grid {
   position: relative;
   z-index: 2;
-  max-width: 920px;
+  max-width: var(--lp-content);
   margin: 0 auto;
-  text-align: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  align-items: center;
+  gap: clamp(32px, 5vw, 68px);
+}
+.lp-hero-content {
+  text-align: left;
 }
 
 .lp-eyebrow {
@@ -199,6 +251,12 @@
   line-height: 1.6;
   color: var(--lp-dim);
 }
+/* Hero content is left-aligned; override the centered defaults it shares
+   with the CTA band. */
+.lp-hero-content .lp-sub { margin-inline: 0; }
+.lp-hero-content .lp-cta-row,
+.lp-hero-content .lp-status { justify-content: flex-start; }
+.lp-hero-content .lp-stats { margin-top: 44px; }
 
 /* CTA row (hero + cta band) */
 .lp-cta-row {
@@ -343,6 +401,348 @@
   text-transform: uppercase;
   color: var(--lp-dim);
 }
+
+/* ── HERO sci-fi agent core (right column) ────────────────────────── */
+.lp-hero-visual {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.lp-console {
+  position: relative;
+  width: min(460px, 100%);
+  border-radius: 18px;
+  border: 1px solid var(--lp-line);
+  background: linear-gradient(180deg, #0e1018f2, #0a0a12f7);
+  box-shadow:
+    0 40px 90px -24px #000000cc,
+    0 8px 28px #00000066,
+    inset 0 1px 0 #ffffff14;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  overflow: hidden;
+  font-family: var(--lp-font-body);
+  animation: lp-con-float 8s ease-in-out infinite;
+}
+@keyframes lp-con-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+/* soft aurora glow bleeding from behind the panel top */
+.lp-console-glow {
+  position: absolute;
+  inset: -40% -20% auto -20%;
+  height: 80%;
+  background: radial-gradient(60% 60% at 50% 0%, #6366f140, transparent 70%);
+  pointer-events: none;
+}
+
+/* window chrome bar */
+.lp-con-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--lp-line);
+  background: #ffffff06;
+}
+.lp-con-dots { display: inline-flex; gap: 6px; }
+.lp-con-dots i {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: #ffffff20;
+}
+.lp-con-dots i:nth-child(1) { background: #ec489988; }
+.lp-con-dots i:nth-child(2) { background: #f4c96488; }
+.lp-con-dots i:nth-child(3) { background: #34d39988; }
+.lp-con-id {
+  font-family: 'SFMono-Regular', ui-monospace, 'Menlo', monospace;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--lp-dim);
+}
+.lp-con-live {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lp-dim);
+  border: 1px solid var(--lp-line);
+  background: #ffffff08;
+}
+.lp-con-live i {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.lp-con-live.on {
+  color: var(--lp-green);
+  border-color: #34d39944;
+  background: #34d39914;
+}
+.lp-con-live.on i {
+  box-shadow: 0 0 0 0 #34d39966;
+  animation: lp-pulse 2s ease-out infinite;
+}
+
+.lp-con-body { padding: 22px 18px; }
+
+/* ── escrow flow: buyer → vault → seller ──────────────────────────── */
+.lp-flow {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  align-items: center;
+  gap: 4px;
+}
+.lp-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+.lp-node-ic {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  font-family: var(--lp-font-display);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--lp-text);
+  border: 1px solid var(--lp-line);
+  background: linear-gradient(180deg, #ffffff10, #ffffff04);
+}
+.lp-node-vault .lp-node-ic {
+  color: var(--lp-cyan);
+  border-color: #22d3ee44;
+  background: linear-gradient(180deg, #22d3ee1c, #6366f114);
+  box-shadow: 0 0 24px -4px #22d3ee66, inset 0 0 14px #22d3ee18;
+  animation: lp-vault-glow 3s ease-in-out infinite;
+}
+@keyframes lp-vault-glow {
+  0%, 100% { box-shadow: 0 0 22px -6px #22d3ee55, inset 0 0 12px #22d3ee14; }
+  50% { box-shadow: 0 0 30px -2px #22d3ee88, inset 0 0 18px #22d3ee28; }
+}
+.lp-node-k {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--lp-text);
+}
+.lp-node-v {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lp-dim);
+}
+/* wire with a packet gliding buyer→vault→seller */
+.lp-wire {
+  position: relative;
+  height: 2px;
+  margin-top: -22px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #ffffff10, #ffffff26, #ffffff10);
+  overflow: hidden;
+}
+.lp-packet {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 22px;
+  height: 2px;
+  transform: translateY(-50%);
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--lp-cyan));
+  box-shadow: 0 0 8px #22d3eecc;
+  animation: lp-packet 2.4s ease-in-out infinite;
+}
+.lp-packet-2 { animation-delay: 1.2s; background: linear-gradient(90deg, transparent, var(--lp-green)); box-shadow: 0 0 8px #34d399cc; }
+@keyframes lp-packet {
+  0% { left: -22px; opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { left: 100%; opacity: 0; }
+}
+
+/* ── locked amount + meter ────────────────────────────────────────── */
+.lp-amount {
+  margin-top: 24px;
+  padding: 16px;
+  border-radius: 13px;
+  border: 1px solid var(--lp-line);
+  background: #ffffff06;
+}
+.lp-amount-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.lp-amount-k {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lp-dim);
+}
+.lp-amount-v {
+  font-family: var(--lp-font-display);
+  font-weight: 700;
+  font-size: 24px;
+  letter-spacing: -0.01em;
+  color: var(--lp-text);
+}
+.lp-amount-v em { font-style: normal; font-size: 13px; color: var(--lp-dim); margin-left: 3px; }
+.lp-meter {
+  height: 6px;
+  margin: 12px 0 10px;
+  border-radius: 999px;
+  background: #ffffff12;
+  overflow: hidden;
+}
+.lp-meter-fill {
+  display: block;
+  height: 100%;
+  width: 66%;
+  border-radius: 999px;
+  background: var(--lp-grad);
+  background-size: 200% 100%;
+  box-shadow: 0 0 12px #6366f1aa;
+  animation: lp-meter-sheen 2.6s linear infinite;
+}
+@keyframes lp-meter-sheen { to { background-position: 200% 0; } }
+.lp-amount-foot {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--lp-dim);
+}
+
+/* ── settlement timeline ──────────────────────────────────────────── */
+.lp-steps-mini {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.lp-steps-mini li {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-size: 13px;
+  color: var(--lp-dim);
+}
+.lp-steps-mini li i {
+  flex: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid #ffffff26;
+  position: relative;
+}
+.lp-steps-mini li.done { color: var(--lp-text); }
+.lp-steps-mini li.done i {
+  border-color: transparent;
+  background: var(--lp-green);
+}
+.lp-steps-mini li.done i::after {
+  content: '';
+  position: absolute;
+  left: 5px; top: 2px;
+  width: 4px; height: 8px;
+  border: solid #06110c;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.lp-steps-mini li.active { color: var(--lp-text); }
+.lp-steps-mini li.active i {
+  border-color: var(--lp-cyan);
+  box-shadow: 0 0 0 0 #22d3ee66;
+  animation: lp-step-pulse 1.8s ease-out infinite;
+}
+.lp-steps-mini li.active i::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: var(--lp-cyan);
+}
+@keyframes lp-step-pulse {
+  0% { box-shadow: 0 0 0 0 #22d3ee66; }
+  70% { box-shadow: 0 0 0 7px #22d3ee00; }
+  100% { box-shadow: 0 0 0 0 #22d3ee00; }
+}
+.lp-step-tag {
+  margin-left: auto;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lp-cyan);
+  background: #22d3ee16;
+  border: 1px solid #22d3ee33;
+}
+
+/* ── telemetry footer ─────────────────────────────────────────────── */
+.lp-con-foot {
+  display: flex;
+  gap: 10px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--lp-line);
+  background: #ffffff06;
+}
+.lp-tele {
+  flex: 1;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--lp-dim);
+  text-align: center;
+}
+.lp-tele b {
+  display: block;
+  font-family: var(--lp-font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--lp-text);
+  margin-bottom: 2px;
+}
+.lp-tele + .lp-tele { border-left: 1px solid var(--lp-line); }
+
+/* single-column below the split breakpoint */
+@media (max-width: 880px) {
+  .lp-hero-grid { grid-template-columns: 1fr; }
+  .lp-hero-content { text-align: center; }
+  .lp-hero-content .lp-sub { margin-inline: auto; }
+  .lp-hero-content .lp-cta-row,
+  .lp-hero-content .lp-status { justify-content: center; }
+  .lp-hero-visual { order: -1; }
+  .lp-console { width: min(420px, 100%); }
+}
+
+:root[data-theme='light'] .lp-console {
+  background: linear-gradient(180deg, #ffffff, #f7f5f0);
+  box-shadow: 0 32px 70px -24px #1712283a, 0 6px 22px #17122814, inset 0 1px 0 #ffffff;
+}
+:root[data-theme='light'] .lp-console-glow {
+  background: radial-gradient(60% 60% at 50% 0%, #6366f11f, transparent 70%);
+}
+:root[data-theme='light'] .lp-con-bar,
+:root[data-theme='light'] .lp-con-foot { background: #17122806; }
+:root[data-theme='light'] .lp-con-dots i { background: #17122820; }
+:root[data-theme='light'] .lp-amount,
+:root[data-theme='light'] .lp-con-live { background: #17122808; }
+:root[data-theme='light'] .lp-meter { background: #17122814; }
+:root[data-theme='light'] .lp-node-ic { background: linear-gradient(180deg, #1712280a, #17122803); }
+:root[data-theme='light'] .lp-steps-mini li i { border-color: #17122833; }
 
 /* ── Generic section ──────────────────────────────────────────────── */
 .lp-section {
@@ -1109,6 +1509,14 @@
   .lp-aurora::after,
   .lp-dot,
   .lp-badge.online i,
+  .lp-hero-bg,
+  .lp-beam,
+  .lp-console,
+  .lp-con-live.on i,
+  .lp-node-vault .lp-node-ic,
+  .lp-packet,
+  .lp-meter-fill,
+  .lp-steps-mini li.active i,
   .lp-modal-ring,
   .lp-modal-live,
   .arch-wire-flow,
@@ -1183,6 +1591,9 @@
 :root[data-theme='light'] .lp-footer {
   background: radial-gradient(900px 420px at 50% 120%, #8b5cf60f, transparent 66%);
 }
+
+/* living background: dial it back so it tints the paper rather than muddies it */
+:root[data-theme='light'] .lp-hero-bg { opacity: 0.45; filter: blur(46px) saturate(1.1); }
 
 /* aurora blobs get softer so they tint rather than dominate the paper */
 :root[data-theme='light'] .lp-aurora { opacity: 0.5; }
