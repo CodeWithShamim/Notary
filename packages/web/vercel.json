@@ -1,8 +1,0 @@
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": null,
-  "installCommand": "npm install",
-  "buildCommand": "npm run build -w @notary/web",
-  "outputDirectory": "packages/web/dist",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
-}
