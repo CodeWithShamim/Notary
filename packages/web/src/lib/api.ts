@@ -18,6 +18,20 @@ export interface AgentStatus {
   timers: { acceptTimeoutMs: number; fundingTimeoutMs: number; defaultDeliveryHours: number; confirmTimeoutMs: number };
 }
 
+export interface Pool {
+  poolId: string;
+  status: 'open' | 'paid_out' | 'cancelled' | 'expired';
+  purpose: string;
+  amountEach: string;
+  coinId: string;
+  symbol?: string;
+  contributors: number;
+  joined: number;
+  pot: string;
+  deadlineAt: number;
+  createdAt: number;
+}
+
 export interface Reputation {
   tag: string;
   dealsAsBuyer: number;
@@ -52,7 +66,7 @@ async function get<T>(path: string): Promise<T> {
 export const fetchStatus = (): Promise<AgentStatus> => get('/api/status');
 export const fetchDealTrail = (dealId: string): Promise<DealTrail> => get(`/api/deals/${dealId}/events`);
 export const fetchProtocol = (): Promise<Record<string, unknown>> => get('/api/protocol');
-export const fetchPools = (): Promise<{ pools: AgentStatus['pools'] & { pot?: string }[] }> => get('/api/pools');
+export const fetchPools = (): Promise<{ pools: Pool[] }> => get('/api/pools');
 export const fetchLeaderboard = (): Promise<{ reputations: Reputation[] }> => get('/api/reputation');
 export const fetchReputation = (tag: string): Promise<Reputation> => get(`/api/reputation/${encodeURIComponent(tag.replace(/^@/, ''))}`);
 export const fetchOffers = (): Promise<{ offers: Offer[] }> => get('/api/offers');

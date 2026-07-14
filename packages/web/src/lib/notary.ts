@@ -27,3 +27,16 @@ export async function dmNotary(msg: NotaryMessage): Promise<string> {
   await sendDmIntent(client, `@${NOTARY_TAG}`, payload, SIGN_LABEL[msg.type]);
   return payload;
 }
+
+/**
+ * Invite @notary to watch a NIP-29 group for `!pool` commands. Unlike the deal
+ * protocol, this is a plain-text control DM (`!pool watch <groupId>`) that the
+ * agent's DM handler joins the group on — group-chat itself is out of the
+ * wallet's scope, so the browser can't post `!pool create/join` directly. After
+ * the agent joins, contributors run those commands inside the group chat.
+ */
+export async function watchPoolGroup(groupId: string): Promise<void> {
+  const client = getConnectClient();
+  if (!client) throw new Error('Connect your Sphere wallet first.');
+  await sendDmIntent(client, `@${NOTARY_TAG}`, `!pool watch ${groupId.trim()}`, 'Invite notary to group');
+}

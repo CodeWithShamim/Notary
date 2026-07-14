@@ -580,26 +580,37 @@ export class DealService {
     if (offer.status !== 'open') {
       return this.safeSendDM(msg.senderPubkey, `Offer ${offerId} is already ${offer.status}.`);
     }
-    await this.closeOffer(offer, 'closed');
+    this.closeOffer(offer, 'closed');
     await this.safeSendDM(msg.senderPubkey, `Offer ${offerId} closed. It is no longer listed.`);
   }
 
-  /** Mark an offer closed/expired and best-effort remove its market mirror. */
-  private async closeOffer(offer: OfferRow, status: 'closed' | 'expired'): Promise<void> {
-    if (offer.marketIntentId && this.sphere.market) {
-      await this.sphere.market.closeIntent(offer.marketIntentId).catch((err) => logger.warn({ err, offerId: offer.offerId }, 'market closeIntent failed'));
-    }
+  /** Mark an offer closed/expired and best-effort remove its market mirror.
+   *  The local DB is updated FIRST and synchronously; the market close is fired
+   *  without awaiting so a slow/hanging market API can never block the caller —
+   *  crucial because this runs on the single serialized actor chain that also
+   *  processes every deal DM and timeout. */
+  private closeOffer(offer: OfferRow, status: 'closed' | 'expired'): void {
     offer.status = status;
     offer.updatedAt = Date.now();
     this.store.updateOffer(offer);
     this.store.addLedger('offer_closed', { offerId: offer.offerId, status });
+    if (offer.marketIntentId && this.sphere.market) {
+      void this.sphere.market
+        .closeIntent(offer.marketIntentId)
+        .catch((err) => logger.warn({ err, offerId: offer.offerId }, 'market closeIntent failed'));
+    }
   }
 
-  /** Retire offers whose TTL lapsed. Called from the timer tick. */
-  private async expireOffers(now: number): Promise<void> {
-    for (const offer of this.store.expiredOpenOffers(now)) {
-      await this.closeOffer(offer, 'expired');
-      logger.info({ offerId: offer.offerId }, 'offer expired');
+  /** Retire offers whose TTL lapsed. Called from the timer tick; never throws so
+   *  it can't wedge deal-timeout processing. */
+  private expireOffers(now: number): void {
+    try {
+      for (const offer of this.store.expiredOpenOffers(now)) {
+        this.closeOffer(offer, 'expired');
+        logger.info({ offerId: offer.offerId }, 'offer expired');
+      }
+    } catch (err) {
+      logger.warn({ err }, 'expireOffers failed');
     }
   }
 
@@ -735,7 +746,7 @@ export class DealService {
 
   private async tickTimers(): Promise<void> {
     const now = Date.now();
-    await this.expireOffers(now);
+    this.expireOffers(now);
     for (const deal of this.store.dealsWithExpiredTimers(now)) {
       if (TERMINAL_STATES.has(deal.state)) continue;
 

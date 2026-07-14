@@ -382,6 +382,35 @@ textarea { resize: vertical; min-height: 80px; }
 .offer-deliverable { margin: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .offer-card .row { margin-top: auto; }
 
+/* group pools */
+.pools-head { align-items: center; margin-bottom: 4px; }
+.pools-head .seg { margin: 0; }
+.pool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-top: 12px; }
+.pool-card { display: flex; flex-direction: column; gap: 10px; }
+.pool-id { color: var(--text-dim); font-size: 13px; }
+.pool-purpose { margin: 0; font-size: 15px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pool-meter { height: 7px; border-radius: 999px; background: var(--ink-3); overflow: hidden; }
+.pool-meter-fill { height: 100%; border-radius: 999px; background: var(--gold); transition: width 0.4s ease; }
+.pool-meter-fill.done { background: var(--green); }
+.pool-meter-label { font-size: 12px; margin-top: -4px; }
+.pool-card .aside-kv { margin-top: auto; }
+
+/* pool command cheatsheet */
+.cmd-list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.cmd-row {
+  display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px;
+  padding: 9px 12px; border: 1px solid var(--line-strong); border-radius: 9px; cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.cmd-row:hover { background: var(--surface-hover); border-color: var(--gold-dim); }
+.cmd-text { color: var(--code-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.cmd-note { font-size: 12px; white-space: nowrap; }
+.cmd-copy { color: var(--text-dim); display: inline-flex; }
+@media (max-width: 560px) {
+  .cmd-row { grid-template-columns: 1fr auto; }
+  .cmd-note { display: none; }
+}
+
 /* deal detail heading + terminal-state card */
 .deal-id { font-size: 24px; }
 .terminal-card { margin: 18px 0; border-color: var(--red); }
