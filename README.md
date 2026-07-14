@@ -5,7 +5,10 @@ don't trust each other - humans, or other agents — hire `@notary` to hold fund
 and settle a deal for a 1% fee. The agent is discovered on the Unicity
 signed-intent market, spoken to over NIP-17 encrypted DMs with a documented JSON
 protocol, funded via payment requests, and it settles every deal **by itself**:
-releases, refunds, timeouts, disputes, and group-pool payouts. It also runs its
+releases, refunds, timeouts, milestone payouts, evidence-based arbitration, and
+group-pool payouts. Sellers can post public **offers** so buyers discover and
+open deals from a marketplace. Every deal can be a single escrow or a **staged
+milestone plan** funded and released one step at a time. The agent also runs its
 own treasury, self-minting working capital and rebalancing fee income.
 
 The **web app** is the human on-ramp. A visitor gets a real client-side Unicity
@@ -48,8 +51,8 @@ Runs on Unicity **testnet2** (the v2 state-transition gateway) via the
                   │  HTTP (poll) │              ▼                            │
                   └──────────────┼──▶ Fastify API: /api/status,             │
                                  │    /api/deals/:id/events, /api/protocol,  │
-                                 │    /api/pools, /api/reputation            │
-                                 │    (NO write endpoints)                   │
+                                 │    /api/offers, /api/pools,               │
+                                 │    /api/reputation   (NO write endpoints) │
                                  └───────────────────────────────────────────┘
 
   shared/  — protocol.ts: zod schemas for every DM, the deal state machine
@@ -73,8 +76,7 @@ notary/
 │   └── web/      React + Vite frontend: client wallet, deal flows, agent status
 ├── .env.example
 ├── NOTES.md      every spec-vs-real-SDK adaptation, with reasons
-├── README.md
-└── SUBMISSION.md
+└── README.md
 ```
 
 npm workspaces · strict TypeScript · ESM · Node ≥ 20.
@@ -157,19 +159,22 @@ treasury, pools).
 Send JSON as an encrypted NIP-17 DM to `@notary`. Machine-readable at
 `GET /api/protocol`. Any non-JSON DM gets a plain-text `help` reply.
 
-| Message          | Direction        | Fields                                                                                                |
-| ---------------- | ---------------- | ----------------------------------------------------------------------------------------------------- |
-| `deal.open`      | buyer → notary   | `seller`, `amount` (base-unit string), `coinId` (hex or symbol), `deliverable`, `deliveryHours?`      |
-| `deal.invite`    | notary → seller  | `dealId`, `buyer`, `seller`, `amount`, `coinId`, `deliverable`, `deliveryHours`, `feeBps`, `acceptBy` |
-| `deal.accept`    | seller → notary  | `dealId`                                                                                              |
-| `deal.reject`    | seller → notary  | `dealId`, `reason?`                                                                                   |
-| `deal.delivered` | seller → notary  | `dealId`, `proof?`                                                                                    |
-| `deal.confirm`   | buyer → notary   | `dealId`                                                                                              |
-| `deal.dispute`   | buyer → notary   | `dealId`, `reason?` — opens an evidence-based arbitration                                             |
-| `deal.evidence`  | party → notary   | `dealId`, `statement`, `proof?` — submit evidence while a deal is `DISPUTED`                          |
-| `deal.status`    | party → notary   | `dealId`                                                                                              |
-| `deal.update`    | notary → parties | `deal` (full snapshot — the web app's live channel)                                                   |
-| `error`          | notary → sender  | `code`, `message`, `dealId?`                                                                          |
+| Message          | Direction        | Fields                                                                                                          |
+| ---------------- | ---------------- | ------------------------------------------------------------------------------------------------------------- |
+| `deal.open`      | buyer → notary   | `seller`, `coinId` (hex or symbol), `deliveryHours?`; then EITHER `amount` + `deliverable` (single) OR `milestones[]` (staged); `fromOffer?` |
+| `deal.invite`    | notary → seller  | `dealId`, `buyer`, `seller`, `amount`, `coinId`, `deliverable`, `deliveryHours`, `feeBps`, `acceptBy`, `milestones?`, `totalAmount?` |
+| `deal.accept`    | seller → notary  | `dealId`                                                                                                      |
+| `deal.reject`    | seller → notary  | `dealId`, `reason?`                                                                                           |
+| `deal.delivered` | seller → notary  | `dealId`, `proof?`                                                                                            |
+| `deal.confirm`   | buyer → notary   | `dealId`                                                                                                      |
+| `deal.dispute`   | buyer → notary   | `dealId`, `reason?` — opens an evidence-based arbitration                                                     |
+| `deal.evidence`  | party → notary   | `dealId`, `statement`, `proof?`, `proposeBuyerBps?` (sealed split proposal) — while a deal is `DISPUTED`      |
+| `deal.status`    | party → notary   | `dealId`                                                                                                      |
+| `deal.update`    | notary → parties | `deal` (full snapshot — the web app's live channel)                                                           |
+| `offer.post`     | seller → notary  | `title`, `coinId`, `deliveryHours?`; `amount` + `deliverable` OR `milestones[]`; `expiresInDays?`             |
+| `offer.close`    | seller → notary  | `offerId`                                                                                                     |
+| `offer.posted`   | notary → seller  | `offerId`, `marketIntentId?` — confirmation an offer is live                                                  |
+| `error`          | notary → sender  | `code`, `message`, `dealId?`                                                                                  |
 
 ### Deal state machine
 
@@ -178,26 +183,60 @@ PROPOSED ──accept──▶ AWAITING_FUNDS ──funds landed──▶ FUNDED
     │                     │                              │                        │
  reject/                funding                       delivery                 confirm ──▶ RELEASED (seller gets amount−fee)
  timeout                timeout                       timeout                  dispute ──▶ DISPUTED
-    ▼                     ▼                              ▼                      timeout ──▶ RELEASED (silence = acceptance)
-CANCELLED             EXPIRED                        REFUNDED (full refund)         │
-                                                                            evidence window +
-                                                                            arbiter verdict
-                                                                                   │
-                                                                                   ▼
-                                                              RESOLVED (escrow split buyer/seller, minus fee)
+    ▼                     ▼                              ▼               confirm-timeout ──▶ RELEASE_PENDING
+CANCELLED             EXPIRED                        REFUNDED           (short appeal window; final warning)
+                                                     (full refund)              │
+                                                                    confirm ──▶ RELEASED
+                                                                    dispute ──▶ DISPUTED
+                                                                    appeal-timeout ──▶ RELEASED (silence finalizes)
+
+DISPUTED ── evidence window ──▶ arbiter / auto-settle verdict ──▶ RESOLVED (escrow split buyer/seller, minus fee)
 ```
 
-**Arbitration.** A `DISPUTE` no longer auto-refunds the buyer. It opens `DISPUTED`:
-both parties submit `deal.evidence`, then an **AI arbiter** (Claude, `claude-opus-4-8`)
-reads the deliverable and all evidence and returns a split — the share of the
-post-fee escrow to each party, written to the public ledger with its reasoning.
-The arbiter rules as soon as both sides respond, or when the evidence window
-lapses. With no `ANTHROPIC_API_KEY` set it falls back to a deterministic rule
-(full refund if the seller showed no evidence, else 50/50), so the agent always
-settles on its own.
+**No instant release on silence.** When the confirm window lapses the deal moves
+to `RELEASE_PENDING`, not straight to `RELEASED`: a final-warning DM goes to the
+buyer and a short **appeal window** (`APPEAL_WINDOW_MS`, default 24h) opens in
+which they can still `deal.confirm` or `deal.dispute` before the silent release
+finalizes. This protects a buyer who was simply asleep from auto-paying for junk.
+
+**Arbitration.** A `DISPUTE` no longer auto-refunds the buyer. It opens `DISPUTED`
+and an evidence window (`DISPUTE_WINDOW_MS`, default 24h). Both parties submit
+`deal.evidence`, optionally attaching `proposeBuyerBps` — a **sealed** proposed
+split (the buyer's share of the post-fee escrow), hidden from the counterparty
+until both have proposed. If both proposals land within tolerance
+(`DISPUTE_AUTO_SETTLE_TOLERANCE_BPS`, default 10%), the deal auto-settles at the
+midpoint with **no arbiter** — most disputes are a price haggle, not a lie.
+Otherwise an **AI arbiter** (Claude, `claude-opus-4-8`) reads the deliverable and
+all evidence and returns a split — the share of the post-fee escrow to each party,
+written to the public ledger with its reasoning. It rules as soon as both sides
+respond, or when the window lapses. With no `ANTHROPIC_API_KEY` set it falls back
+to a deterministic rule (full refund if the seller showed no evidence, else
+50/50), so the agent always settles on its own.
+
+**Staged (milestone) deals.** A `deal.open` carrying `milestones[]` instead of a
+single `amount`/`deliverable` runs the same funded → delivered → released loop
+**once per milestone**, funding and releasing each stage in order. Only the active
+milestone is ever escrowed, so a dispute or refund touches just that stage.
 
 The exact transition table lives in `packages/shared/src/protocol.ts` and is
 unit-tested for every legal transition **and** the rejection of every illegal one.
+
+### Marketplace (seller offers)
+
+Sellers list public offers so buyers can discover work and open a deal from it
+with the terms pre-filled. DM `@notary`:
+
+```
+offer.post   title, coinId, deliveryHours?; amount + deliverable OR milestones[]; expiresInDays?
+offer.close  offerId   — take a listing down early
+```
+
+The agent curates the offer, mirrors it to the Unicity signed-intent market, and
+serves it read-only at `GET /api/offers` (one at `GET /api/offers/:id`). The web
+app renders these on the **Marketplace** page (`/market`); opening a deal from an
+offer stamps `fromOffer` on the `deal.open` for provenance. Offers expire after
+`OFFER_TTL_DAYS` (default 14) and each seller may keep up to
+`MAX_OPEN_OFFERS_PER_SELLER` (default 25) open at once.
 
 ### Group pool commands (NIP-29)
 
@@ -243,13 +282,17 @@ dedicated **Reputation** page, so a buyer can vet a counterparty before funding.
 | `ANTHROPIC_API_KEY`                       | _(unset)_                       | Enables the Claude arbiter for disputes. Unset → deterministic fallback. **A real secret.** |
 | `ARBITER_MODEL`                           | `claude-opus-4-8`               | Model the AI arbiter uses.                                             |
 | `DISPUTE_WINDOW_MS`                       | 24h                             | Evidence window before the arbiter rules on a dispute.                 |
-| `MIN_ESCROW` / `MAX_ESCROW`               | `1` / `1e15`                    | Escrow bounds (base units).                                            |
+| `DISPUTE_AUTO_SETTLE_TOLERANCE_BPS`       | `1000` (10%)                    | How close both sealed split proposals must be to auto-settle, no arbiter.|
+| `APPEAL_WINDOW_MS`                        | 24h                             | Grace window after the confirm window lapses before the silent release. |
+| `MIN_ESCROW` / `MAX_ESCROW`               | `1` / `1e24`                    | Escrow bounds (base units; 1e24 ≈ 1,000,000 UCT).                       |
+| `MAX_MILESTONES`                          | `12`                            | Cap on milestones per staged deal.                                     |
 | `ACCEPT_/FUNDING_/CONFIRM_TIMEOUT_MS`     | 1h / 24h / 48h                  | Deal timers.                                                           |
-| `DEFAULT_DELIVERY_HOURS`                  | `72`                            | Delivery window when the buyer omits one.                              |
-| `TREASURY_FLOOR` / `TREASURY_MINT_AMOUNT` | `1000` / `100000`               | Self-mint trigger + amount.                                            |
-| `TREASURY_THRESHOLD` / `PREFERRED_COIN`   | `10000` / `UCT`                 | Rebalance non-preferred coin above threshold.                          |
+| `DEFAULT_DELIVERY_HOURS`                  | `72`                            | Delivery window when the buyer omits one.                             |
+| `OFFER_TTL_DAYS` / `MAX_OPEN_OFFERS_PER_SELLER` | `14` / `25`               | Marketplace offer lifetime and per-seller listing cap.                 |
+| `TREASURY_FLOOR` / `TREASURY_MINT_AMOUNT` | `1e18` / `1e19`                 | Self-mint trigger (< 1 UCT) + amount (10 UCT).                          |
+| `TREASURY_THRESHOLD` / `PREFERRED_COIN`   | `1e20` / `UCT`                  | Rebalance non-preferred coin above threshold (100 UCT).                 |
 | `TREASURY_AUTO_SWAP`                      | `false`                         | SDK P2P swaps need the experimental accounting module (see NOTES §5).  |
-| `API_PORT`                                | `8787`                          | Read-only API port.                                                    |
+| `API_PORT`                                | `8787`                          | Read-only API port (honours `PORT` on PaaS).                           |
 
 Web app env (`VITE_*`): `VITE_UNICITY_API_KEY`, `VITE_NOTARY_TAG`, `VITE_AGENT_API`.
 

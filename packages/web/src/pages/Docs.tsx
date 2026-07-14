@@ -7,8 +7,12 @@ const TOC: { id: string; label: string }[] = [
   { id: 'quickstart', label: 'Quickstart' },
   { id: 'concepts', label: 'Core concepts' },
   { id: 'lifecycle', label: 'Deal lifecycle' },
+  { id: 'milestones', label: 'Staged milestones' },
+  { id: 'arbitration', label: 'Disputes & arbitration' },
   { id: 'protocol', label: 'DM protocol' },
+  { id: 'marketplace', label: 'Marketplace' },
   { id: 'pools', label: 'Group pools' },
+  { id: 'reputation', label: 'Reputation' },
   { id: 'fees', label: 'Fees & timers' },
   { id: 'api', label: 'Read-only API' },
   { id: 'config', label: 'Configuration' },
@@ -24,7 +28,8 @@ const MESSAGES: { name: string; dir: string; fields: string }[] = [
   { name: 'deal.reject', dir: 'seller → notary', fields: 'dealId, reason?' },
   { name: 'deal.delivered', dir: 'seller → notary', fields: 'dealId, proof?' },
   { name: 'deal.confirm', dir: 'buyer → notary', fields: 'dealId' },
-  { name: 'deal.dispute', dir: 'buyer → notary', fields: 'dealId, reason?' },
+  { name: 'deal.dispute', dir: 'buyer → notary', fields: 'dealId, reason? — opens an evidence-based arbitration' },
+  { name: 'deal.evidence', dir: 'party → notary', fields: 'dealId, statement, proof?, proposeBuyerBps? (sealed split proposal) — while DISPUTED' },
   { name: 'deal.status', dir: 'party → notary', fields: 'dealId' },
   { name: 'deal.update', dir: 'notary → parties', fields: 'deal (full snapshot — the web app’s live channel)' },
   { name: 'offer.post', dir: 'seller → notary', fields: 'title, coinId, deliveryHours?; amount + deliverable OR milestones[]; expiresInDays?' },
@@ -51,7 +56,11 @@ const CONFIG: { name: string; def: string; meaning: string }[] = [
   { name: 'WALLET_MNEMONIC', def: 'unset', meaning: 'Pin a fixed identity; otherwise persisted in DATA_DIR.' },
   { name: 'DATA_DIR / DB_PATH', def: './wallet-data / ./notary.db', meaning: 'Wallet + SQLite persistence paths.' },
   { name: 'FEE_BPS / DISPUTE_FEE_BPS', def: '100 / 50', meaning: 'Escrow fee / retained dispute fee, in basis points.' },
-  { name: 'MIN_ESCROW / MAX_ESCROW', def: '1 / 1e15', meaning: 'Escrow bounds, in base units.' },
+  { name: 'ANTHROPIC_API_KEY', def: 'unset', meaning: 'Enables the Claude AI arbiter for disputes. Unset → deterministic fallback. A real secret.' },
+  { name: 'ARBITER_MODEL', def: 'claude-opus-4-8', meaning: 'Model the AI arbiter uses.' },
+  { name: 'DISPUTE_WINDOW_MS', def: '24h', meaning: 'Evidence window before the arbiter rules on a dispute.' },
+  { name: 'DISPUTE_AUTO_SETTLE_TOLERANCE_BPS', def: '1000 (10%)', meaning: 'How close both sealed split proposals must be to auto-settle at the midpoint, no arbiter.' },
+  { name: 'MIN_ESCROW / MAX_ESCROW', def: '1 / 1e24', meaning: 'Escrow bounds, in base units (1e24 ≈ 1,000,000 UCT).' },
   { name: 'ACCEPT / FUNDING / CONFIRM_TIMEOUT_MS', def: '1h / 24h / 48h', meaning: 'Deal timers.' },
   { name: 'APPEAL_WINDOW_MS', def: '24h', meaning: 'Grace window after the confirm window lapses — the buyer can still dispute before the silent release finalizes.' },
   { name: 'MAX_MILESTONES', def: '12', meaning: 'Cap on milestones per staged deal.' },
@@ -121,7 +130,8 @@ export function Docs() {
             <code>@notary</code> to hold funds and settle a deal for a 1% fee. The agent is discovered on the
             Unicity signed-intent market, spoken to over NIP-17 encrypted DMs with a documented JSON protocol,
             funded via payment requests, and it settles every deal <b>by itself</b>: releases, refunds,
-            timeouts, disputes, and group-pool payouts.
+            timeouts, milestone payouts, evidence-based arbitration, and group-pool payouts. Sellers post public
+            offers to a marketplace, and any deal can run as a single escrow or a staged milestone plan.
           </p>
           <p>
             The web app is the human on-ramp. A visitor gets a real client-side Unicity wallet (keys never
@@ -214,11 +224,16 @@ npm run demo:pool      -w @notary/agent   # group pool: create → 3× join/fund
             the rejection of every illegal one.
           </p>
           <pre className="json">{`PROPOSED ──accept──▶ AWAITING_FUNDS ──funds landed──▶ FUNDED ──delivered──▶ DELIVERED_CLAIMED
-   │                    │                              │                        │
-reject/               funding                       delivery                 confirm ─▶ RELEASED  (seller gets amount − fee)
-timeout               timeout                       timeout                  dispute ─▶ REFUNDED  (buyer gets amount − dispute fee)
-   ▼                    ▼                              ▼                      timeout ─▶ RELEASED  (silence = acceptance)
-CANCELLED            EXPIRED                        REFUNDED (full refund)`}</pre>
+   │                    │                              │                     │
+reject/               funding                       delivery      confirm ─▶ RELEASED  (seller gets amount − fee)
+timeout               timeout                       timeout       dispute ─▶ DISPUTED  (evidence + arbitration)
+   ▼                    ▼                              ▼           confirm-timeout ─▶ RELEASE_PENDING
+CANCELLED            EXPIRED                        REFUNDED       (short appeal window; final warning)
+                                                    (full refund)         │
+                                                          confirm ─▶ RELEASED · dispute ─▶ DISPUTED
+                                                          appeal-timeout ─▶ RELEASED (silence finalizes)
+
+DISPUTED ── evidence window ─▶ arbiter / auto-settle verdict ─▶ RESOLVED (escrow split, minus fee)`}</pre>
           <table className="clean">
             <thead>
               <tr><th>State</th><th>Meaning</th></tr>
@@ -229,8 +244,10 @@ CANCELLED            EXPIRED                        REFUNDED (full refund)`}</pr
               <tr><td className="mono">FUNDED</td><td>Escrow is confirmed on-chain. The seller can begin work.</td></tr>
               <tr><td className="mono">DELIVERED_CLAIMED</td><td>Seller marked the work delivered. Buyer can confirm or dispute within the confirm window.</td></tr>
               <tr><td className="mono">RELEASE_PENDING</td><td>The confirm window lapsed. A short appeal window opens with a final warning to the buyer — they can still dispute or confirm before the silent release finalizes.</td></tr>
+              <tr><td className="mono">DISPUTED</td><td>Buyer disputed. An evidence window is open: both parties submit <code>deal.evidence</code> before the arbiter (or an auto-settle) rules.</td></tr>
               <tr><td className="mono">RELEASED</td><td>Terminal. Seller received <code>amount − fee</code>; the notary retained the fee. For a staged deal, this is the last milestone; earlier milestones released as they completed.</td></tr>
-              <tr><td className="mono">REFUNDED</td><td>Terminal. Buyer refunded (full on timeout, or <code>amount − dispute fee</code> on dispute). For a staged deal, only the active milestone is escrowed and refunded.</td></tr>
+              <tr><td className="mono">RESOLVED</td><td>Terminal. Arbitration decided a split of the post-fee escrow between buyer and seller. The verdict + rationale are on the public ledger.</td></tr>
+              <tr><td className="mono">REFUNDED</td><td>Terminal. Buyer refunded (full on timeout). For a staged deal, only the active milestone is escrowed and refunded.</td></tr>
               <tr><td className="mono">CANCELLED</td><td>Terminal. Seller rejected, or the accept window elapsed.</td></tr>
               <tr><td className="mono">EXPIRED</td><td>Terminal. The funding window elapsed before escrow landed.</td></tr>
             </tbody>
@@ -239,6 +256,70 @@ CANCELLED            EXPIRED                        REFUNDED (full refund)`}</pr
             <b>Crash-safe timers.</b> The agent rehydrates every timer from persisted <code>deadlineAt</code>{' '}
             timestamps in SQLite and resumes on restart, so a deal never gets stuck if the process bounces.
           </div>
+        </section>
+
+        {/* ── Milestones ───────────────────────────────────────── */}
+        <section id="milestones" className="doc-section">
+          <h2>Staged milestones</h2>
+          <p>
+            A deal can be a single escrow (one <code>amount</code> + <code>deliverable</code>) or a{' '}
+            <b>staged plan</b> of two or more milestones. A milestone deal walks the same funded &rarr;
+            delivered &rarr; released loop <b>once per stage, in order</b> &mdash; only the <b>active</b>{' '}
+            milestone is ever escrowed, so a dispute or refund only ever touches that one stage while earlier
+            stages stay released and later stages stay unfunded.
+          </p>
+          <pre className="json">{`{
+  "type": "deal.open",
+  "seller": "@alice",
+  "coinId": "UCT",
+  "milestones": [
+    { "amount": "40000", "deliverable": "Wireframes",       "deliveryHours": 48 },
+    { "amount": "60000", "deliverable": "Final design + src", "deliveryHours": 72 }
+  ]
+}`}</pre>
+          <p className="doc-note">
+            Provide <b>either</b> <code>amount</code> + <code>deliverable</code> <b>or</b>{' '}
+            <code>milestones[]</code> &mdash; never both. Up to <code>MAX_MILESTONES</code> (default 12) stages
+            per deal. The live snapshot carries every milestone&rsquo;s running state and{' '}
+            <code>currentMilestone</code>.
+          </p>
+        </section>
+
+        {/* ── Arbitration ──────────────────────────────────────── */}
+        <section id="arbitration" className="doc-section">
+          <h2>Disputes &amp; arbitration</h2>
+          <p>
+            A <code>deal.dispute</code> no longer auto-refunds the buyer. It opens{' '}
+            <code>DISPUTED</code> and an evidence window (<code>DISPUTE_WINDOW_MS</code>, default 24h) in which
+            both parties send <code>deal.evidence</code> &mdash; a statement, an optional proof reference, and
+            an optional <b>sealed</b> settlement proposal.
+          </p>
+          <div className="doc-cards">
+            <div className="card">
+              <h3>Sealed auto-settle</h3>
+              <p>
+                Each party may attach <code>proposeBuyerBps</code> &mdash; the buyer&rsquo;s share of the
+                post-fee escrow they&rsquo;ll accept &mdash; kept hidden from the counterparty until both have
+                proposed. If the two numbers land within tolerance
+                (<code>DISPUTE_AUTO_SETTLE_TOLERANCE_BPS</code>, default 10%), the deal settles at their{' '}
+                <b>midpoint</b> with no arbiter. Most disputes are a price haggle, not a lie.
+              </p>
+            </div>
+            <div className="card">
+              <h3>AI arbiter</h3>
+              <p>
+                Otherwise an AI arbiter (Claude, <code>claude-opus-4-8</code>) reads the deliverable and all
+                evidence and returns a split, written to the public ledger with its reasoning. It rules once
+                both sides respond or the window lapses. With no <code>ANTHROPIC_API_KEY</code> it falls back to
+                a deterministic rule (full refund if the seller showed no evidence, else 50/50) &mdash; the
+                agent always settles on its own.
+              </p>
+            </div>
+          </div>
+          <p className="doc-note">
+            The notary retains its dispute fee (<code>DISPUTE_FEE_BPS</code>) off the top; the verdict splits
+            the remainder, and no dust is lost. The deal ends <code>RESOLVED</code>.
+          </p>
         </section>
 
         {/* ── Protocol ─────────────────────────────────────────── */}
@@ -295,6 +376,32 @@ CANCELLED            EXPIRED                        REFUNDED (full refund)`}</pr
           </table>
         </section>
 
+        {/* ── Marketplace ──────────────────────────────────────── */}
+        <section id="marketplace" className="doc-section">
+          <h2>Marketplace</h2>
+          <p>
+            Sellers publish public <b>offers</b> so buyers can discover work and open a deal with the terms
+            pre-filled. The agent curates each offer, mirrors it to the Unicity signed-intent market, and serves
+            it read-only. Offers are single-price or staged (milestones), just like deals.
+          </p>
+          <pre className="json">{`{
+  "type": "offer.post",
+  "title": "Landing-page copywriting",
+  "amount": "80000",
+  "coinId": "UCT",
+  "deliverable": "Hero + 3 sections, 2 revisions",
+  "deliveryHours": 48,
+  "expiresInDays": 14
+}
+// offer.close { offerId }   — take a listing down early`}</pre>
+          <p className="doc-note">
+            Live offers render on the <a href="/market">Marketplace</a> page, backed by{' '}
+            <code>GET /api/offers</code>. Opening a deal from one stamps <code>fromOffer</code> on the{' '}
+            <code>deal.open</code> for provenance. Offers expire after <code>OFFER_TTL_DAYS</code> (default 14);
+            each seller may keep up to <code>MAX_OPEN_OFFERS_PER_SELLER</code> (default 25) open at once.
+          </p>
+        </section>
+
         {/* ── Pools ────────────────────────────────────────────── */}
         <section id="pools" className="doc-section">
           <h2>Group pools (NIP-29)</h2>
@@ -314,14 +421,34 @@ CANCELLED            EXPIRED                        REFUNDED (full refund)`}</pr
           </p>
         </section>
 
+        {/* ── Reputation ───────────────────────────────────────── */}
+        <section id="reputation" className="doc-section">
+          <h2>Reputation</h2>
+          <p>
+            Every party is a registered nametag and every settlement is recorded, so the agent computes a{' '}
+            <b>track record per nametag</b> from its own deal history &mdash; no extra input, nothing to fake.
+            A buyer can vet a counterparty before funding: the record shows inline on the New-Deal form and on a
+            dedicated <a href="/reputation">Reputation</a> page.
+          </p>
+          <table className="clean">
+            <thead>
+              <tr><th>Endpoint</th><th>Returns</th></tr>
+            </thead>
+            <tbody>
+              <tr><td className="mono">GET /api/reputation</td><td>Leaderboard of the busiest traders.</td></tr>
+              <tr><td className="mono">GET /api/reputation/:tag</td><td>One nametag: deals as buyer/seller, clean completions, arbitrated disputes, missed deliveries, completion rate, settled volume.</td></tr>
+            </tbody>
+          </table>
+        </section>
+
         {/* ── Fees & timers ────────────────────────────────────── */}
         <section id="fees" className="doc-section">
           <h2>Fees &amp; timers</h2>
           <p>
             Fees are basis points (bps) of the escrow amount; 100 bps = 1%. On a normal release the seller
-            receives <code>amount − fee</code>. On a dispute the notary retains a smaller dispute fee and
-            refunds the rest to the buyer. A timeout refund is <b>full</b> &mdash; no fee is taken when the
-            counterparty simply never showed up.
+            receives <code>amount − fee</code>. On an arbitrated dispute the notary retains a smaller dispute
+            fee off the top and the verdict splits the remainder between buyer and seller. A timeout refund is{' '}
+            <b>full</b> &mdash; no fee is taken when the counterparty simply never showed up.
           </p>
           <div className="doc-cards">
             <div className="card">
@@ -330,7 +457,7 @@ CANCELLED            EXPIRED                        REFUNDED (full refund)`}</pr
                 <li><b>Escrow fee</b> &mdash; <code>FEE_BPS</code>, default 100 (1%).</li>
                 <li><b>Dispute fee</b> &mdash; <code>DISPUTE_FEE_BPS</code>, default 50 (0.5%).</li>
                 <li>Release split: seller = <code>amount − fee</code>, notary = <code>fee</code>.</li>
-                <li>Dispute split: buyer = <code>amount − dispute fee</code>, notary = <code>dispute fee</code>.</li>
+                <li>Dispute split: notary keeps the dispute fee; the verdict&rsquo;s <code>buyerBps</code> splits the remainder buyer/seller.</li>
               </ul>
             </div>
             <div className="card">
@@ -339,7 +466,8 @@ CANCELLED            EXPIRED                        REFUNDED (full refund)`}</pr
                 <li><b>Accept</b> &mdash; 1h for the seller to accept or reject.</li>
                 <li><b>Funding</b> &mdash; 24h for the buyer to fund escrow.</li>
                 <li><b>Delivery</b> &mdash; 72h default (buyer can override per deal).</li>
-                <li><b>Confirm</b> &mdash; 48h; silence past this releases to the seller.</li>
+                <li><b>Confirm</b> &mdash; 48h, then a 24h <b>appeal</b> window before silent release.</li>
+                <li><b>Dispute</b> &mdash; 24h evidence window before the arbiter rules.</li>
               </ul>
             </div>
           </div>
@@ -359,8 +487,10 @@ CANCELLED            EXPIRED                        REFUNDED (full refund)`}</pr
             <tbody>
               <tr><td className="mono">GET /api/status</td><td>Identity, uptime, fees, deals-by-state, escrow volume, treasury, pools, timers.</td></tr>
               <tr><td className="mono">GET /api/deals/:id/events</td><td>The public event trail for one deal (state, amount, timestamps, events).</td></tr>
-              <tr><td className="mono">GET /api/protocol</td><td>Machine-readable JSON schema for every DM message type.</td></tr>
+              <tr><td className="mono">GET /api/offers</td><td>Open marketplace offers; <code>GET /api/offers/:id</code> for one.</td></tr>
               <tr><td className="mono">GET /api/pools</td><td>All tracked group pools with funding progress.</td></tr>
+              <tr><td className="mono">GET /api/reputation</td><td>Track-record leaderboard; <code>GET /api/reputation/:tag</code> for one nametag.</td></tr>
+              <tr><td className="mono">GET /api/protocol</td><td>Machine-readable JSON schema for every DM message type.</td></tr>
             </tbody>
           </table>
           <p className="doc-note">
