@@ -10,6 +10,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App.js';
 import { ConnectProvider } from './state/ConnectContext.js';
 import './styles.css';
+import './styles/landing.css';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { refetchInterval: 10_000, retry: 1, staleTime: 5_000 } },

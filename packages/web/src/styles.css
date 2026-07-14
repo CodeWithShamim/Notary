@@ -30,6 +30,8 @@ body {
   font-family: var(--font-body);
   font-size: 15px;
   line-height: 1.55;
+  /* contain full-bleed landing sections (100vw breakout) — no horizontal scroll */
+  overflow-x: hidden;
 }
 
 a { color: var(--gold); text-decoration: none; }
