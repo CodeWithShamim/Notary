@@ -13,6 +13,7 @@ import { MyDeals } from './pages/MyDeals.js';
 import { DealDetail } from './pages/DealDetail.js';
 import { AgentStatus } from './pages/AgentStatus.js';
 import { Pools } from './pages/Pools.js';
+import { Reputation } from './pages/Reputation.js';
 import { Docs } from './pages/Docs.js';
 
 export default function App() {
@@ -42,6 +43,7 @@ export default function App() {
           <Route path="/deals" element={<MyDeals />} />
           <Route path="/deals/:dealId" element={<DealDetail />} />
           <Route path="/pools" element={<Pools />} />
+          <Route path="/reputation" element={<Reputation />} />
           <Route path="/agent" element={<AgentStatus />} />
           <Route path="/docs" element={<Docs />} />
           <Route path="*" element={<div className="empty"><div className="big"><FileQuestionIcon size={40} /></div>Nothing here.</div>} />

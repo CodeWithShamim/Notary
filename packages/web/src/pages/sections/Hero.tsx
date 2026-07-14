@@ -27,8 +27,9 @@ export function Hero(props: {
             Escrow, <span className="grad">notarized by a machine.</span>
           </h1>
           <p className="lp-sub">
-            @{nametag} is an autonomous agent that holds funds between two parties who don't trust each other and
-            settles every deal itself - releases, refunds, timeouts and disputes - for a {feePct}% fee.
+            @{nametag} is an autonomous agent that holds funds between two parties who don't trust
+            each other and settles every deal itself - releases, refunds, timeouts and disputes -
+            for a {feePct}% fee.
           </p>
           <div className="lp-cta-row">
             <Link to="/new" className="lp-btn lp-btn-primary">
@@ -71,7 +72,9 @@ export function Hero(props: {
             {/* window chrome + live status */}
             <header className="lp-con-bar">
               <span className="lp-con-dots">
-                <i /><i /><i />
+                <i />
+                <i />
+                <i />
               </span>
               <span className="lp-con-id">deal · 0xA3F0…9C2</span>
               <span className={`lp-con-live ${online ? 'on' : ''}`}>
@@ -99,7 +102,13 @@ export function Hero(props: {
                         strokeWidth="1.6"
                         strokeLinejoin="round"
                       />
-                      <path d="m9 12 2.2 2.2L15.5 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                      <path
+                        d="m9 12 2.2 2.2L15.5 10"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   </span>
                   <span className="lp-node-k">Vault</span>
@@ -120,7 +129,7 @@ export function Hero(props: {
                 <div className="lp-amount-head">
                   <span className="lp-amount-k">Escrow locked</span>
                   <span className="lp-amount-v">
-                    2,400 <em>ALPH</em>
+                    2,400 <em>UCT</em>
                   </span>
                 </div>
                 <div className="lp-meter">

@@ -10,6 +10,7 @@ const LINKS = [
   { to: '/new', label: 'New deal', end: false, Icon: PlusCircleIcon },
   { to: '/deals', label: 'My deals', end: false, Icon: FileTextIcon },
   { to: '/pools', label: 'Pools', end: false, Icon: LayersIcon },
+  { to: '/reputation', label: 'Reputation', end: false, Icon: ScaleIcon },
   { to: '/agent', label: 'Agent', end: false, Icon: BotIcon },
   { to: '/docs', label: 'Docs', end: false, Icon: BookIcon },
 ];

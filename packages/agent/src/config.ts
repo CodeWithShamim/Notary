@@ -54,7 +54,23 @@ export const config = {
   fundingTimeoutMs: int('FUNDING_TIMEOUT_MS', 24 * HOUR),
   defaultDeliveryHours: int('DEFAULT_DELIVERY_HOURS', 72),
   confirmTimeoutMs: int('CONFIRM_TIMEOUT_MS', 48 * HOUR),
+  /** How long both parties get to submit evidence before the arbiter rules. */
+  disputeWindowMs: int('DISPUTE_WINDOW_MS', 24 * HOUR),
   timerPollMs: int('TIMER_POLL_MS', 15_000),
+
+  // arbitration -------------------------------------------------------------
+  /** Anthropic API key for the AI arbiter. If unset, disputes fall back to a
+   *  deterministic rule (full refund if the seller offered no evidence, else 50/50). */
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY || undefined,
+  arbiterModel: process.env.ARBITER_MODEL ?? 'claude-opus-4-8',
+  /** How close both parties' sealed split proposals must be (basis points) for
+   *  the deal to auto-settle at their midpoint without invoking the arbiter.
+   *  1000 = 10%. Most disputes are a price haggle, not a lie — this settles
+   *  them cheaply and reserves the (fallible) arbiter for genuine deadlocks. */
+  disputeAutoSettleToleranceBps: int('DISPUTE_AUTO_SETTLE_TOLERANCE_BPS', 1000),
+  /** Cap on total evidence characters per party in a dispute. Bounds the
+   *  arbiter's token cost and stops one side flooding to drown out the other. */
+  disputeMaxEvidenceChars: int('DISPUTE_MAX_EVIDENCE_CHARS', 12000),
 
   // treasury (base units; 1 UCT = 1e18) --------------------------------------
   treasuryFloor: big('TREASURY_FLOOR', 10n ** 18n), //        self-mint below 1 UCT

@@ -7,6 +7,7 @@ const cfg: MachineConfig = {
   disputeFeeBps: 50,
   fundingTimeoutMs: 24 * 3_600_000,
   confirmTimeoutMs: 48 * 3_600_000,
+  disputeWindowMs: 24 * 3_600_000,
 };
 
 const NOW = 1_750_000_000_000;
@@ -29,6 +30,11 @@ function deal(state: DealState, extra: Partial<DealRow> = {}): DealRow {
     paymentRequestId: null,
     fundedTransferId: null,
     settlementJson: null,
+    buyerEvidence: null,
+    sellerEvidence: null,
+    verdictJson: null,
+    buyerProposalBps: null,
+    sellerProposalBps: null,
     createdAt: NOW - 1000,
     deadlineAt: NOW + 1000,
     updatedAt: NOW - 1000,
@@ -100,12 +106,34 @@ describe('transition — refund / cancel paths', () => {
     expect(payout).toMatchObject({ kind: 'refund', recipient: 'buyer', amount: 1_000_000n });
   });
 
-  it('DELIVERED_CLAIMED + DISPUTE → REFUNDED, buyer refunded minus dispute fee', () => {
+  it('DELIVERED_CLAIMED + DISPUTE → DISPUTED, opens evidence window, no payout yet', () => {
     const r = assertOk(transition(deal(DealState.DELIVERED_CLAIMED), DealEvent.DISPUTE, { reason: 'not as described' }, NOW, cfg));
-    expect(r.deal.state).toBe(DealState.REFUNDED);
-    const payout = r.effects.find((e) => e.type === 'payout');
-    expect(payout).toMatchObject({ kind: 'dispute_refund', recipient: 'buyer', amount: 995_000n });
-    expect(JSON.parse(r.deal.settlementJson!)).toEqual({ toBuyer: '995000', fee: '5000' });
+    expect(r.deal.state).toBe(DealState.DISPUTED);
+    expect(r.deal.buyerEvidence).toBe('not as described');
+    expect(r.deal.deadlineAt).toBe(NOW + cfg.disputeWindowMs);
+    expect(r.effects.every((e) => e.type !== 'payout')).toBe(true);
+    expect(r.deal.settlementJson).toBeNull();
+  });
+
+  it('DISPUTED + RESOLVE (full buyer award) → RESOLVED, buyer refunded minus arbitration fee', () => {
+    const r = assertOk(transition(deal(DealState.DISPUTED), DealEvent.RESOLVE, { buyerBps: 10_000, rationale: 'seller never delivered', arbiter: 'claude-opus-4-8' }, NOW, cfg));
+    expect(r.deal.state).toBe(DealState.RESOLVED);
+    const payouts = r.effects.filter((e) => e.type === 'payout');
+    // fee = 1_000_000 * 50 / 10000 = 5000; remainder 995000 all to buyer
+    expect(payouts).toEqual([expect.objectContaining({ kind: 'arbitration', recipient: 'buyer', amount: 995_000n })]);
+    expect(JSON.parse(r.deal.settlementJson!)).toEqual({ toBuyer: '995000', toSeller: '0', fee: '5000' });
+    expect(JSON.parse(r.deal.verdictJson!)).toMatchObject({ buyerBps: 10_000, arbiter: 'claude-opus-4-8' });
+  });
+
+  it('DISPUTED + RESOLVE (60/40 split) → RESOLVED, pays both parties, sum exact', () => {
+    const r = assertOk(transition(deal(DealState.DISPUTED), DealEvent.RESOLVE, { buyerBps: 6_000 }, NOW, cfg));
+    const payouts = r.effects.filter((e) => e.type === 'payout') as { recipient: string; amount: bigint }[];
+    const toBuyer = payouts.find((p) => p.recipient === 'buyer')!.amount;
+    const toSeller = payouts.find((p) => p.recipient === 'seller')!.amount;
+    // remainder 995000: buyer 60% floored = 597000, seller gets the rest 398000
+    expect(toBuyer).toBe(597_000n);
+    expect(toSeller).toBe(398_000n);
+    expect(toBuyer + toSeller + 5_000n).toBe(1_000_000n); // no dust lost
   });
 
   it('DELIVERED_CLAIMED + CONFIRM_TIMEOUT → RELEASED (silence = acceptance)', () => {
@@ -128,6 +156,7 @@ describe('transition — illegal transitions are rejected, never throw', () => {
     [DealState.DELIVERED_CLAIMED, DealEvent.CONFIRM],
     [DealState.DELIVERED_CLAIMED, DealEvent.DISPUTE],
     [DealState.DELIVERED_CLAIMED, DealEvent.CONFIRM_TIMEOUT],
+    [DealState.DISPUTED, DealEvent.RESOLVE],
   ];
 
   it('every (state, event) pair outside the table returns ILLEGAL_TRANSITION', () => {
@@ -142,7 +171,7 @@ describe('transition — illegal transitions are rejected, never throw', () => {
   });
 
   it('double-settlement is impossible: terminal states accept no events', () => {
-    for (const from of [DealState.RELEASED, DealState.REFUNDED, DealState.CANCELLED, DealState.EXPIRED]) {
+    for (const from of [DealState.RELEASED, DealState.REFUNDED, DealState.RESOLVED, DealState.CANCELLED, DealState.EXPIRED]) {
       for (const event of Object.values(DealEvent)) {
         expect(transition(deal(from), event, {}, NOW, cfg).ok).toBe(false);
       }

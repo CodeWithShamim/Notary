@@ -8,12 +8,26 @@ export interface AgentStatus {
   uptimeSec: number;
   feeBps: number;
   disputeFeeBps: number;
+  arbiter: { mode: 'ai' | 'rule'; model: string | null; disputeWindowMs: number };
   dealsByState: Record<string, number>;
   escrowVolume: { coinId: string; symbol: string | null; total: string }[];
   pools: { poolId: string; status: string; purpose: string; amountEach: string; symbol: string; contributors: number; joined: number; deadlineAt: number }[];
   treasury: { assets: { coinId: string; symbol: string; total: string; decimals: number }[]; lastRun: number | null };
   lastRebalance: Record<string, unknown> | null;
   timers: { acceptTimeoutMs: number; fundingTimeoutMs: number; defaultDeliveryHours: number; confirmTimeoutMs: number };
+}
+
+export interface Reputation {
+  tag: string;
+  dealsAsBuyer: number;
+  dealsAsSeller: number;
+  completed: number;
+  disputed: number;
+  ghosted: number;
+  completionRate: number | null;
+  volumeSettled: { symbol: string; total: string }[];
+  firstSeen: number | null;
+  lastActive: number | null;
 }
 
 export interface DealTrail {
@@ -38,3 +52,5 @@ export const fetchStatus = (): Promise<AgentStatus> => get('/api/status');
 export const fetchDealTrail = (dealId: string): Promise<DealTrail> => get(`/api/deals/${dealId}/events`);
 export const fetchProtocol = (): Promise<Record<string, unknown>> => get('/api/protocol');
 export const fetchPools = (): Promise<{ pools: AgentStatus['pools'] & { pot?: string }[] }> => get('/api/pools');
+export const fetchLeaderboard = (): Promise<{ reputations: Reputation[] }> => get('/api/reputation');
+export const fetchReputation = (tag: string): Promise<Reputation> => get(`/api/reputation/${encodeURIComponent(tag.replace(/^@/, ''))}`);

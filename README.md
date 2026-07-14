@@ -48,7 +48,8 @@ Runs on Unicity **testnet2** (the v2 state-transition gateway) via the
                   │  HTTP (poll) │              ▼                            │
                   └──────────────┼──▶ Fastify API: /api/status,             │
                                  │    /api/deals/:id/events, /api/protocol,  │
-                                 │    /api/pools   (NO write endpoints)      │
+                                 │    /api/pools, /api/reputation            │
+                                 │    (NO write endpoints)                   │
                                  └───────────────────────────────────────────┘
 
   shared/  — protocol.ts: zod schemas for every DM, the deal state machine
@@ -164,7 +165,8 @@ Send JSON as an encrypted NIP-17 DM to `@notary`. Machine-readable at
 | `deal.reject`    | seller → notary  | `dealId`, `reason?`                                                                                   |
 | `deal.delivered` | seller → notary  | `dealId`, `proof?`                                                                                    |
 | `deal.confirm`   | buyer → notary   | `dealId`                                                                                              |
-| `deal.dispute`   | buyer → notary   | `dealId`, `reason?`                                                                                   |
+| `deal.dispute`   | buyer → notary   | `dealId`, `reason?` — opens an evidence-based arbitration                                             |
+| `deal.evidence`  | party → notary   | `dealId`, `statement`, `proof?` — submit evidence while a deal is `DISPUTED`                          |
 | `deal.status`    | party → notary   | `dealId`                                                                                              |
 | `deal.update`    | notary → parties | `deal` (full snapshot — the web app's live channel)                                                   |
 | `error`          | notary → sender  | `code`, `message`, `dealId?`                                                                          |
@@ -175,10 +177,24 @@ Send JSON as an encrypted NIP-17 DM to `@notary`. Machine-readable at
 PROPOSED ──accept──▶ AWAITING_FUNDS ──funds landed──▶ FUNDED ──delivered──▶ DELIVERED_CLAIMED
     │                     │                              │                        │
  reject/                funding                       delivery                 confirm ──▶ RELEASED (seller gets amount−fee)
- timeout                timeout                       timeout                  dispute ──▶ REFUNDED (buyer gets amount−dispute fee)
+ timeout                timeout                       timeout                  dispute ──▶ DISPUTED
     ▼                     ▼                              ▼                      timeout ──▶ RELEASED (silence = acceptance)
-CANCELLED             EXPIRED                        REFUNDED (full refund)
+CANCELLED             EXPIRED                        REFUNDED (full refund)         │
+                                                                            evidence window +
+                                                                            arbiter verdict
+                                                                                   │
+                                                                                   ▼
+                                                              RESOLVED (escrow split buyer/seller, minus fee)
 ```
+
+**Arbitration.** A `DISPUTE` no longer auto-refunds the buyer. It opens `DISPUTED`:
+both parties submit `deal.evidence`, then an **AI arbiter** (Claude, `claude-opus-4-8`)
+reads the deliverable and all evidence and returns a split — the share of the
+post-fee escrow to each party, written to the public ledger with its reasoning.
+The arbiter rules as soon as both sides respond, or when the evidence window
+lapses. With no `ANTHROPIC_API_KEY` set it falls back to a deterministic rule
+(full refund if the seller showed no evidence, else 50/50), so the agent always
+settles on its own.
 
 The exact transition table lives in `packages/shared/src/protocol.ts` and is
 unit-tested for every legal transition **and** the rejection of every illegal one.
@@ -197,6 +213,22 @@ DM `@notary` `!pool watch <groupId>` to invite it into a group, then in that gro
 
 Partial pools auto-refund at the deadline.
 
+### Reputation
+
+Every party is a registered nametag and every settlement is recorded, so the
+agent computes a **track record per nametag** from its own deal history — no
+extra input, nothing to fake. Served read-only:
+
+```
+GET /api/reputation          leaderboard (busiest traders)
+GET /api/reputation/:tag     one nametag: deals as buyer/seller, clean
+                             completions, arbitrated disputes, missed
+                             deliveries, completion rate, settled volume
+```
+
+The web app shows a seller's record inline on the New-Deal form and on a
+dedicated **Reputation** page, so a buyer can vet a counterparty before funding.
+
 ---
 
 ## Configuration (agent `.env`)
@@ -207,7 +239,10 @@ Partial pools auto-refund at the deadline.
 | `NOTARY_NAMETAG`                          | `notary`                        | The agent's nametag (must be free on the network).                     |
 | `WALLET_MNEMONIC`                         | _(unset)_                       | Pin a fixed identity; otherwise persisted in `DATA_DIR`.               |
 | `DATA_DIR` / `DB_PATH`                    | `./wallet-data` / `./notary.db` | Wallet + SQLite persistence.                                           |
-| `FEE_BPS` / `DISPUTE_FEE_BPS`             | `100` / `50`                    | Escrow fee / retained dispute fee (basis points).                      |
+| `FEE_BPS` / `DISPUTE_FEE_BPS`             | `100` / `50`                    | Escrow fee / retained arbitration fee (basis points).                  |
+| `ANTHROPIC_API_KEY`                       | _(unset)_                       | Enables the Claude arbiter for disputes. Unset → deterministic fallback. **A real secret.** |
+| `ARBITER_MODEL`                           | `claude-opus-4-8`               | Model the AI arbiter uses.                                             |
+| `DISPUTE_WINDOW_MS`                       | 24h                             | Evidence window before the arbiter rules on a dispute.                 |
 | `MIN_ESCROW` / `MAX_ESCROW`               | `1` / `1e15`                    | Escrow bounds (base units).                                            |
 | `ACCEPT_/FUNDING_/CONFIRM_TIMEOUT_MS`     | 1h / 24h / 48h                  | Deal timers.                                                           |
 | `DEFAULT_DELIVERY_HOURS`                  | `72`                            | Delivery window when the buyer omits one.                              |

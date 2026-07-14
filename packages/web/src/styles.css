@@ -301,6 +301,10 @@ h3 { font-size: 15px; margin: 0 0 8px; color: var(--text); }
 .btn.danger:hover:not(:disabled) { background: #e07a6a1a; }
 .btn.small { padding: 6px 12px; font-size: 13px; }
 .btn.block { width: 100%; justify-content: center; }
+.flip-x { transform: scaleX(-1); }
+
+.pagination { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 20px; }
+.pagination-info { font-variant-numeric: tabular-nums; }
 
 label.field { display: block; margin-bottom: 14px; }
 label.field span { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 5px; }

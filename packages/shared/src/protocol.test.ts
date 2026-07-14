@@ -7,6 +7,7 @@ import {
   LEGAL_TRANSITIONS,
   TERMINAL_STATES,
   amountToBigint,
+  arbitrationSplit,
   computeFee,
   disputeSplit,
   encodeMessage,
@@ -48,6 +49,22 @@ describe('fee math', () => {
     expect(fee).toBe(5_000n);
   });
 
+  it('arbitration split conserves the total and awards buyerBps of the remainder', () => {
+    const full = arbitrationSplit(1_000_000n, 10_000, 50);
+    expect(full).toEqual({ toBuyer: 995_000n, toSeller: 0n, fee: 5_000n });
+
+    const none = arbitrationSplit(1_000_000n, 0, 50);
+    expect(none).toEqual({ toBuyer: 0n, toSeller: 995_000n, fee: 5_000n });
+
+    const split = arbitrationSplit(1_000_000n, 6_000, 50);
+    expect(split.toBuyer + split.toSeller + split.fee).toBe(1_000_000n); // no dust
+    expect(split.toBuyer).toBe(597_000n);
+    expect(split.toSeller).toBe(398_000n);
+
+    expect(() => arbitrationSplit(1_000_000n, 10_001, 50)).toThrow(RangeError);
+    expect(() => arbitrationSplit(1_000_000n, -1, 50)).toThrow(RangeError);
+  });
+
   it('amountToBigint accepts only integer strings', () => {
     expect(amountToBigint('42')).toBe(42n);
     expect(() => amountToBigint('4.2')).toThrow();
@@ -67,10 +84,11 @@ describe('state machine table', () => {
     expect(nextState(DealState.FUNDED, DealEvent.DELIVERED)).toBe(DealState.DELIVERED_CLAIMED);
     expect(nextState(DealState.FUNDED, DealEvent.DELIVERY_TIMEOUT)).toBe(DealState.REFUNDED);
     expect(nextState(DealState.DELIVERED_CLAIMED, DealEvent.CONFIRM)).toBe(DealState.RELEASED);
-    expect(nextState(DealState.DELIVERED_CLAIMED, DealEvent.DISPUTE)).toBe(DealState.REFUNDED);
+    expect(nextState(DealState.DELIVERED_CLAIMED, DealEvent.DISPUTE)).toBe(DealState.DISPUTED);
     expect(nextState(DealState.DELIVERED_CLAIMED, DealEvent.CONFIRM_TIMEOUT)).toBe(
       DealState.RELEASED,
     );
+    expect(nextState(DealState.DISPUTED, DealEvent.RESOLVE)).toBe(DealState.RESOLVED);
   });
 
   it('rejects every transition not in the table', () => {
@@ -83,8 +101,8 @@ describe('state machine table', () => {
         else legal++;
       }
     }
-    expect(legal).toBe(10);
-    expect(illegal).toBe(DEAL_STATES.length * Object.values(DealEvent).length - 10);
+    expect(legal).toBe(11);
+    expect(illegal).toBe(DEAL_STATES.length * Object.values(DealEvent).length - 11);
   });
 
   it('terminal states have no outgoing transitions', () => {

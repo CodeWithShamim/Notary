@@ -23,6 +23,7 @@ import {
 import { config } from './config.js';
 import { dealLogger, logger } from './logger.js';
 import { TIMEOUT_EVENT_FOR_STATE, transition, type Effect } from './machine.js';
+import { judge, type Verdict } from './arbiter.js';
 import { withRetry } from './retry.js';
 import type { DealRow, PayoutRow, Store } from './db.js';
 
@@ -30,6 +31,7 @@ const machineCfg = {
   disputeFeeBps: config.disputeFeeBps,
   fundingTimeoutMs: config.fundingTimeoutMs,
   confirmTimeoutMs: config.confirmTimeoutMs,
+  disputeWindowMs: config.disputeWindowMs,
 };
 
 export class DealService {
@@ -127,6 +129,8 @@ export class DealService {
           return await this.handlePartyEvent(msg, m.dealId, 'buyer', DealEvent.CONFIRM, {});
         case 'deal.dispute':
           return await this.handlePartyEvent(msg, m.dealId, 'buyer', DealEvent.DISPUTE, { reason: m.reason });
+        case 'deal.evidence':
+          return await this.handleEvidence(msg, m.dealId, m.statement, m.proof, m.proposeBuyerBps);
         case 'deal.status':
           return await this.handleStatus(msg, m.dealId);
         default:
@@ -197,6 +201,11 @@ export class DealService {
       paymentRequestId: null,
       fundedTransferId: null,
       settlementJson: null,
+      buyerEvidence: null,
+      sellerEvidence: null,
+      verdictJson: null,
+      buyerProposalBps: null,
+      sellerProposalBps: null,
       createdAt: now,
       deadlineAt: now + config.acceptTimeoutMs,
       updatedAt: now,
@@ -274,6 +283,119 @@ export class DealService {
     if (deal.sellerPubkey) return msg.senderPubkey === deal.sellerPubkey;
     const tag = msg.senderNametag ?? (await this.sphere.communications.resolvePeerNametag(msg.senderPubkey).catch(() => undefined));
     return tag?.toLowerCase() === deal.sellerTag.toLowerCase();
+  }
+
+  /** Either party submits evidence during the dispute window; the arbiter rules
+   *  as soon as both sides have spoken, or when the window lapses (tickTimers). */
+  private async handleEvidence(msg: DirectMessage, dealId: string, statement: string, proof?: string, proposeBuyerBps?: number): Promise<void> {
+    const deal = this.store.getDeal(dealId);
+    if (!deal) return this.replyError(msg.senderPubkey, ErrorCode.UNKNOWN_DEAL, `No deal ${dealId}.`, dealId);
+    if (deal.state !== DealState.DISPUTED) {
+      return this.replyError(msg.senderPubkey, ErrorCode.ILLEGAL_TRANSITION, `Deal ${dealId} is not open for evidence (state ${deal.state}).`, dealId);
+    }
+
+    let role: 'buyer' | 'seller';
+    if (await this.authenticate(deal, msg, 'buyer')) role = 'buyer';
+    else if (await this.authenticate(deal, msg, 'seller')) role = 'seller';
+    else return this.replyError(msg.senderPubkey, ErrorCode.NOT_YOUR_DEAL, `You are not a party to ${dealId}.`, dealId);
+
+    const entry = proof ? `${statement}\n[proof: ${proof}]` : statement;
+    // Cap accumulated evidence per party: bounds the arbiter's token cost and
+    // stops one side flooding many submissions to drown the other's evidence.
+    const existingEvidence = (role === 'buyer' ? deal.buyerEvidence : deal.sellerEvidence) ?? '';
+    if (existingEvidence.length + entry.length + 1 > config.disputeMaxEvidenceChars) {
+      return this.replyError(
+        msg.senderPubkey,
+        ErrorCode.BAD_MESSAGE,
+        `Evidence limit reached for ${dealId} (max ${config.disputeMaxEvidenceChars} characters per party). Summarize your case and resubmit.`,
+        dealId,
+      );
+    }
+    if (role === 'buyer') deal.buyerEvidence = deal.buyerEvidence ? `${deal.buyerEvidence}\n${entry}` : entry;
+    else deal.sellerEvidence = deal.sellerEvidence ? `${deal.sellerEvidence}\n${entry}` : entry;
+
+    // A settlement proposal, if included, is recorded SEALED and FINAL. Sealed:
+    // the number is kept out of the public ledger event and the snapshot, so the
+    // counterparty can't anchor to it. Final: each party gets exactly one
+    // proposal — otherwise a party could binary-search the counterparty's sealed
+    // figure by probing the tolerance band across repeated submissions, then
+    // land just inside it to skew the midpoint.
+    let proposalRecorded = false;
+    if (proposeBuyerBps !== undefined) {
+      const existing = role === 'buyer' ? deal.buyerProposalBps : deal.sellerProposalBps;
+      if (existing !== null) {
+        dealLogger(dealId).warn({ role }, 'ignoring repeat settlement proposal — proposals are final');
+        await this.safeSendDM(msg.senderPubkey, `Your sealed settlement proposal for ${dealId} is final; the new figure was ignored (your statement was still recorded).`);
+      } else {
+        if (role === 'buyer') deal.buyerProposalBps = proposeBuyerBps;
+        else deal.sellerProposalBps = proposeBuyerBps;
+        proposalRecorded = true;
+      }
+    }
+
+    deal.updatedAt = Date.now();
+    this.store.updateDeal(deal);
+    this.store.addDealEvent(dealId, 'EVIDENCE', `${role} submitted evidence`);
+    if (proposalRecorded) {
+      this.store.addDealEvent(dealId, 'PROPOSAL', `${role} submitted a sealed settlement proposal`);
+    }
+    dealLogger(dealId).info({ role, proposed: proposalRecorded }, 'dispute evidence received');
+    await this.safeSendDM(msg.senderPubkey, encodeMessage({ v: 1, type: 'deal.update', deal: this.snapshot(deal) }));
+
+    // Both sides proposed a split: if they roughly agree, settle at the midpoint
+    // with no arbiter — most disputes are a price haggle, not a lie. The numbers
+    // are compared only now, once both are locked in.
+    if (deal.buyerProposalBps !== null && deal.sellerProposalBps !== null) {
+      const gap = Math.abs(deal.buyerProposalBps - deal.sellerProposalBps);
+      if (gap <= config.disputeAutoSettleToleranceBps) {
+        const midpoint = Math.round((deal.buyerProposalBps + deal.sellerProposalBps) / 2);
+        dealLogger(dealId).info(
+          { buyer: deal.buyerProposalBps, seller: deal.sellerProposalBps, midpoint },
+          'proposals within tolerance — auto-settling at midpoint (no arbiter)',
+        );
+        return this.applyVerdict(
+          deal,
+          {
+            buyerBps: midpoint,
+            rationale: `Settled by agreement: both parties proposed splits within ${config.disputeAutoSettleToleranceBps / 100}% of each other (buyer ${deal.buyerProposalBps / 100}%, seller ${deal.sellerProposalBps / 100}%). No arbiter was required; the escrow is split at the midpoint.`,
+            arbiter: 'agreement',
+          },
+          'AGREED',
+        );
+      }
+      dealLogger(dealId).info(
+        { buyer: deal.buyerProposalBps, seller: deal.sellerProposalBps },
+        'proposals too far apart — escalating to the arbiter',
+      );
+    }
+
+    // Both sides have now been heard — rule immediately instead of waiting.
+    if (deal.buyerEvidence && deal.sellerEvidence) await this.resolveDispute(deal);
+  }
+
+  /** Run the arbiter on a disputed deal and apply its split verdict. */
+  private async resolveDispute(deal: DealRow): Promise<void> {
+    if (deal.state !== DealState.DISPUTED) return; // already resolved / raced
+    dealLogger(deal.dealId).info('resolving dispute — invoking arbiter');
+    const verdict = await judge({
+      dealId: deal.dealId,
+      deliverable: deal.deliverable,
+      amount: deal.amount,
+      symbol: deal.symbol ?? deal.coinId.slice(0, 8),
+      deliveryProof: deal.proof,
+      buyerEvidence: deal.buyerEvidence,
+      sellerEvidence: deal.sellerEvidence,
+    });
+    await this.applyVerdict(deal, verdict, 'ARBITER_RULED');
+  }
+
+  /** Commit a settled verdict — from the arbiter, or from an agreed midpoint —
+   *  as the RESOLVE transition, ledgering the buyer share and how it was reached. */
+  private async applyVerdict(deal: DealRow, verdict: Verdict, event: string): Promise<void> {
+    if (deal.state !== DealState.DISPUTED) return; // already resolved / raced
+    this.store.addDealEvent(deal.dealId, event, `${verdict.arbiter}: buyer ${verdict.buyerBps / 100}% — ${verdict.rationale}`);
+    const result = transition(deal, DealEvent.RESOLVE, verdict, Date.now(), machineCfg);
+    if (result.ok) await this.commit(result.deal, DealEvent.RESOLVE, result.effects);
   }
 
   private async handleStatus(msg: DirectMessage, dealId: string): Promise<void> {
@@ -419,6 +541,15 @@ export class DealService {
     for (const deal of this.store.dealsWithExpiredTimers(now)) {
       if (TERMINAL_STATES.has(deal.state)) continue;
 
+      // A disputed deal's window has lapsed — the arbiter rules on whatever
+      // evidence exists. This is async (an AI call), so it's not a pure
+      // machine timeout; resolveDispute handles the RESOLVE transition itself.
+      if (deal.state === DealState.DISPUTED) {
+        dealLogger(deal.dealId).info('dispute window lapsed — ruling on submitted evidence');
+        await this.resolveDispute(deal);
+        continue;
+      }
+
       // A deal can sit AWAITING_FUNDS with a verified-late transfer: re-check
       // funding one last time before expiring it.
       if (deal.state === DealState.AWAITING_FUNDS) {
@@ -546,6 +677,15 @@ export class DealService {
       settlement: deal.settlementJson
         ? { ...JSON.parse(deal.settlementJson), transferIds: this.store.payoutsForDeal(deal.dealId).map((p) => p.transferId).filter((t): t is string => t !== null) }
         : undefined,
+      dispute:
+        deal.buyerEvidence || deal.sellerEvidence || deal.verdictJson
+          ? {
+              reason: deal.buyerEvidence ?? undefined,
+              buyerEvidence: deal.buyerEvidence ?? undefined,
+              sellerEvidence: deal.sellerEvidence ?? undefined,
+              verdict: deal.verdictJson ? JSON.parse(deal.verdictJson) : undefined,
+            }
+          : undefined,
       events: this.store.getDealEvents(deal.dealId).map((e) => ({ at: e.at, event: e.event, detail: e.detail ?? undefined })),
     };
   }

@@ -3,12 +3,14 @@ import { human, timeLeft } from '../lib/format.js';
 import { useConnect } from '../state/ConnectContext.js';
 import { FileTextIcon, ClockIcon } from '../components/Icon.js';
 import { PageLayout, AsideCard } from '../components/PageLayout.js';
+import { Pagination, usePaginated } from '../components/Pagination.js';
 
 const ACTIVE_STATES = new Set(['PROPOSED', 'AWAITING_FUNDS', 'FUNDED', 'DELIVERED_CLAIMED']);
 
 export function MyDeals() {
   const { deals, nametag } = useConnect();
   const list = Object.values(deals).sort((a, b) => b.snapshot.createdAt - a.snapshot.createdAt);
+  const { page, setPage, pageCount, pageItems, pageSize, total } = usePaginated(list, 10);
 
   if (list.length === 0) {
     return (
@@ -48,7 +50,7 @@ export function MyDeals() {
     <PageLayout aside={aside}>
       <h1>My deals</h1>
       <p className="sub">Live state pushed by @notary over encrypted DMs, merged with its public event API.</p>
-      {list.map(({ snapshot: d }) => {
+      {pageItems.map(({ snapshot: d }) => {
         const role = d.buyerTag?.toLowerCase() === nametag?.toLowerCase() ? 'buyer' : d.sellerTag?.toLowerCase() === nametag?.toLowerCase() ? 'seller' : '?';
         return (
           <Link to={`/deals/${d.dealId}`} key={d.dealId} className="deal-link">
@@ -69,6 +71,7 @@ export function MyDeals() {
           </Link>
         );
       })}
+      <Pagination page={page} pageCount={pageCount} total={total} pageSize={pageSize} onChange={setPage} />
     </PageLayout>
   );
 }

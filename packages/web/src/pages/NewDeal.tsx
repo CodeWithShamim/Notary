@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { parseTokenAmount } from '@unicitylabs/sphere-sdk';
 import { dmNotary } from '../lib/notary.js';
 import { humanError, uctCoinId } from '../lib/sphere.js';
+import { fetchReputation } from '../lib/api.js';
 import { CheckIcon } from '../components/Icon.js';
 import { PageLayout, AsideCard } from '../components/PageLayout.js';
 import { useConnect } from '../state/ConnectContext.js';
@@ -22,6 +24,13 @@ export function NewDeal() {
   const coins = assets.length ? assets : [];
   const selected = coins.find((a) => a.symbol === coin);
   const decimals = selected?.decimals ?? 18;
+
+  const sellerTag = seller.trim().replace(/^@/, '').toLowerCase();
+  const rep = useQuery({
+    queryKey: ['reputation', sellerTag],
+    queryFn: () => fetchReputation(sellerTag),
+    enabled: sellerTag.length >= 3,
+  });
 
   if (!nametag) {
     return (
@@ -124,6 +133,21 @@ export function NewDeal() {
           <span>Seller's nametag</span>
           <input value={seller} onChange={(e) => setSeller(e.target.value)} placeholder="@bob" />
         </label>
+        {sellerTag.length >= 3 && rep.data && (
+          <p className="muted" style={{ marginTop: '-0.4rem' }}>
+            {rep.data.dealsAsSeller === 0 ? (
+              <>No selling history for @{sellerTag} yet.</>
+            ) : (
+              <>
+                @{sellerTag}: {rep.data.completed} completed
+                {rep.data.disputed > 0 && <>, {rep.data.disputed} arbitrated</>}
+                {rep.data.ghosted > 0 && <>, {rep.data.ghosted} missed</>}
+                {rep.data.completionRate !== null && <> · {Math.round(rep.data.completionRate * 100)}% clean</>}
+                {' '}· <Link to="/reputation">details</Link>
+              </>
+            )}
+          </p>
+        )}
         <div className="grid2">
           <label className="field">
             <span>Amount ({coin})</span>

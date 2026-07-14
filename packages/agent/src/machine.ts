@@ -6,7 +6,7 @@
 import {
   DealEvent,
   DealState,
-  disputeSplit,
+  arbitrationSplit,
   nextState,
   releaseSplit,
 } from '@notary/shared';
@@ -16,6 +16,7 @@ export interface MachineConfig {
   disputeFeeBps: number;
   fundingTimeoutMs: number;
   confirmTimeoutMs: number;
+  disputeWindowMs: number;
 }
 
 export type EventPayload = {
@@ -23,13 +24,16 @@ export type EventPayload = {
   reason?: string; //       REJECT / DISPUTE
   proof?: string; //        DELIVERED
   transferId?: string; //   FUNDS_RECEIVED
+  buyerBps?: number; //     RESOLVE — arbiter's award to the buyer (0..10000)
+  rationale?: string; //    RESOLVE — arbiter's stated reasoning
+  arbiter?: string; //      RESOLVE — which arbiter ruled (model id / "rule:default")
 };
 
 export type Effect =
   | { type: 'send_payment_request' } //  buyer funds escrow (on ACCEPT)
   | {
       type: 'payout';
-      kind: 'release' | 'refund' | 'dispute_refund';
+      kind: 'release' | 'refund' | 'dispute_refund' | 'arbitration';
       recipient: 'buyer' | 'seller';
       amount: bigint;
       memo: string;
@@ -162,22 +166,55 @@ export function transition(
       break;
     }
     case DealEvent.DISPUTE: {
-      const { toBuyer, fee } = disputeSplit(amount, cfg.disputeFeeBps);
-      d.settlementJson = JSON.stringify({ toBuyer: toBuyer.toString(), fee: fee.toString() });
-      effects.push(
-        {
+      // No payout yet — open an evidence window; the arbiter rules when it lapses
+      // (or as soon as both parties have submitted).
+      if (payload.reason) d.buyerEvidence = payload.reason;
+      d.deadlineAt = now + cfg.disputeWindowMs;
+      const hrs = Math.max(1, Math.round(cfg.disputeWindowMs / 3_600_000));
+      effects.push({
+        type: 'notify',
+        audience: 'both',
+        text: `Deal ${d.dealId} is DISPUTED${payload.reason ? ` ("${payload.reason}")` : ''}. Both parties have ${hrs}h to submit evidence via deal.evidence. An AI arbiter will then read the deliverable and all evidence and rule a split, minus the ${cfg.disputeFeeBps / 100}% arbitration fee. Funds stay in escrow until then.`,
+      });
+      break;
+    }
+    case DealEvent.RESOLVE: {
+      const buyerBps = payload.buyerBps ?? 10_000; // fail safe = full refund
+      const { toBuyer, toSeller, fee } = arbitrationSplit(amount, buyerBps, cfg.disputeFeeBps);
+      d.settlementJson = JSON.stringify({
+        toBuyer: toBuyer.toString(),
+        toSeller: toSeller.toString(),
+        fee: fee.toString(),
+      });
+      d.verdictJson = JSON.stringify({
+        buyerBps,
+        rationale: payload.rationale ?? '',
+        arbiter: payload.arbiter ?? 'rule:default',
+      });
+      if (toBuyer > 0n) {
+        effects.push({
           type: 'payout',
-          kind: 'dispute_refund',
+          kind: 'arbitration',
           recipient: 'buyer',
           amount: toBuyer,
-          memo: `notary dispute refund deal ${d.dealId}`,
-        },
-        {
-          type: 'notify',
-          audience: 'both',
-          text: `Deal ${d.dealId} DISPUTED${payload.reason ? ` ("${payload.reason}")` : ''}. v1 arbitration rule: buyer refunded ${toBuyer}, ${fee} retained as the dispute fee. Sellers who disagree can escalate off-band; v2 will add evidence-based arbitration.`,
-        },
-      );
+          memo: `notary arbitration refund deal ${d.dealId}`,
+        });
+      }
+      if (toSeller > 0n) {
+        effects.push({
+          type: 'payout',
+          kind: 'arbitration',
+          recipient: 'seller',
+          amount: toSeller,
+          memo: `notary arbitration release deal ${d.dealId}`,
+        });
+      }
+      const pct = (buyerBps / 100).toFixed(0);
+      effects.push({
+        type: 'notify',
+        audience: 'both',
+        text: `Deal ${d.dealId} RESOLVED by ${payload.arbiter ?? 'the arbiter'}: ${pct}% to the buyer (${toBuyer}), ${100 - Number(pct)}% to the seller (${toSeller}), ${fee} retained as the arbitration fee.${payload.rationale ? ` Reasoning: ${payload.rationale}` : ''}`,
+      });
       break;
     }
   }

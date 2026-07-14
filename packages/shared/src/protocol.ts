@@ -21,8 +21,10 @@ export const DealState = {
   AWAITING_FUNDS: 'AWAITING_FUNDS',
   FUNDED: 'FUNDED',
   DELIVERED_CLAIMED: 'DELIVERED_CLAIMED',
+  DISPUTED: 'DISPUTED', //   buyer disputed; evidence window open before arbitration
   RELEASED: 'RELEASED',
   REFUNDED: 'REFUNDED',
+  RESOLVED: 'RESOLVED', //   arbitration decided a split between buyer & seller
   CANCELLED: 'CANCELLED',
   EXPIRED: 'EXPIRED',
 } as const;
@@ -33,6 +35,7 @@ export const DEAL_STATES = Object.values(DealState) as DealState[];
 export const TERMINAL_STATES: ReadonlySet<DealState> = new Set([
   DealState.RELEASED,
   DealState.REFUNDED,
+  DealState.RESOLVED,
   DealState.CANCELLED,
   DealState.EXPIRED,
 ]);
@@ -47,8 +50,9 @@ export const DealEvent = {
   DELIVERED: 'DELIVERED', //         seller claims delivery
   DELIVERY_TIMEOUT: 'DELIVERY_TIMEOUT',
   CONFIRM: 'CONFIRM', //             buyer confirms delivery
-  DISPUTE: 'DISPUTE', //             buyer disputes delivery
+  DISPUTE: 'DISPUTE', //             buyer disputes delivery → opens arbitration
   CONFIRM_TIMEOUT: 'CONFIRM_TIMEOUT', // buyer silence = acceptance
+  RESOLVE: 'RESOLVE', //             arbiter's verdict settles a dispute (agent-internal)
 } as const;
 export type DealEvent = (typeof DealEvent)[keyof typeof DealEvent];
 
@@ -74,8 +78,11 @@ export const LEGAL_TRANSITIONS: Readonly<
   },
   [DealState.DELIVERED_CLAIMED]: {
     [DealEvent.CONFIRM]: DealState.RELEASED,
-    [DealEvent.DISPUTE]: DealState.REFUNDED, // v1 deterministic arbitration
+    [DealEvent.DISPUTE]: DealState.DISPUTED, // v2: opens an evidence-based arbitration
     [DealEvent.CONFIRM_TIMEOUT]: DealState.RELEASED, // silence = acceptance
+  },
+  [DealState.DISPUTED]: {
+    [DealEvent.RESOLVE]: DealState.RESOLVED, // arbiter's split verdict is final
   },
 };
 
@@ -127,6 +134,27 @@ export function disputeSplit(
 ): { toBuyer: bigint; fee: bigint } {
   const fee = computeFee(amount, disputeFeeBps);
   return { toBuyer: amount - fee, fee };
+}
+
+/**
+ * v2 arbitration rule: the notary retains its arbitration fee off the top,
+ * then the arbiter's verdict splits the remainder. `buyerBps` is the share of
+ * the post-fee remainder awarded to the buyer (0 = seller keeps everything,
+ * 10000 = full refund). The seller receives the rest — no dust is lost.
+ */
+export function arbitrationSplit(
+  amount: bigint,
+  buyerBps: number,
+  disputeFeeBps: number,
+): { toBuyer: bigint; toSeller: bigint; fee: bigint } {
+  if (!Number.isInteger(buyerBps) || buyerBps < 0 || buyerBps > 10_000) {
+    throw new RangeError('buyerBps must be an integer in [0, 10000]');
+  }
+  const fee = computeFee(amount, disputeFeeBps);
+  const remainder = amount - fee;
+  const toBuyer = (remainder * BigInt(buyerBps)) / BPS_DENOMINATOR;
+  const toSeller = remainder - toBuyer; // remainder − toBuyer keeps the sum exact
+  return { toBuyer, toSeller, fee };
 }
 
 /** Parse a wire amount string into bigint base units; throws on garbage. */
@@ -195,6 +223,21 @@ export const DealDisputeSchema = z.object({
   reason: z.string().max(2000).optional(),
 });
 
+/** Either party submits evidence while a deal is DISPUTED (before the arbiter rules). */
+export const DealEvidenceSchema = z.object({
+  ...base,
+  type: z.literal('deal.evidence'),
+  dealId: zDealId,
+  statement: z.string().min(1).max(4000),
+  proof: z.string().max(2000).optional(), // URL / hash / reference
+  /** Optional sealed settlement proposal: the buyer's share of the escrow
+   *  (0–10000 bps) this party is willing to accept. When both parties propose
+   *  splits within tolerance, the deal auto-settles at the midpoint with no
+   *  arbiter. Kept sealed from the counterparty until both have proposed, so
+   *  neither can anchor to the other's number. */
+  proposeBuyerBps: z.number().int().min(0).max(10_000).optional(),
+});
+
 export const DealStatusSchema = z.object({
   ...base,
   type: z.literal('deal.status'),
@@ -259,6 +302,21 @@ export const DealSnapshotSchema = z.object({
       transferIds: z.array(z.string()).optional(),
     })
     .optional(),
+  // Arbitration record — present once a deal has been disputed.
+  dispute: z
+    .object({
+      reason: z.string().optional(), //        buyer's stated grievance
+      buyerEvidence: z.string().optional(), //  buyer's submitted evidence
+      sellerEvidence: z.string().optional(), // seller's submitted evidence
+      verdict: z
+        .object({
+          buyerBps: z.number().int(), // share of post-fee escrow awarded to buyer
+          rationale: z.string(),
+          arbiter: z.string(), //       e.g. "claude-opus-4-8" or "rule:default"
+        })
+        .optional(),
+    })
+    .optional(),
   events: z.array(DealLedgerEventSchema).optional(),
 });
 export type DealSnapshot = z.infer<typeof DealSnapshotSchema>;
@@ -300,6 +358,7 @@ export const NotaryMessageSchema = z.discriminatedUnion('type', [
   DealDeliveredSchema,
   DealConfirmSchema,
   DealDisputeSchema,
+  DealEvidenceSchema,
   DealStatusSchema,
   DealUpdateSchema,
   ProtocolErrorSchema,
@@ -314,6 +373,7 @@ export type DealFunded = z.infer<typeof DealFundedSchema>;
 export type DealDelivered = z.infer<typeof DealDeliveredSchema>;
 export type DealConfirm = z.infer<typeof DealConfirmSchema>;
 export type DealDispute = z.infer<typeof DealDisputeSchema>;
+export type DealEvidence = z.infer<typeof DealEvidenceSchema>;
 export type DealStatus = z.infer<typeof DealStatusSchema>;
 export type DealUpdate = z.infer<typeof DealUpdateSchema>;
 export type ProtocolError = z.infer<typeof ProtocolErrorSchema>;
@@ -358,6 +418,7 @@ Commands (send as JSON DM):
   {"v":1,"type":"deal.delivered","dealId":"...","proof":"..."} (seller)
   {"v":1,"type":"deal.confirm","dealId":"..."}    (buyer)
   {"v":1,"type":"deal.dispute","dealId":"...","reason":"..."} (buyer)
+  {"v":1,"type":"deal.evidence","dealId":"...","statement":"...","proof":"...","proposeBuyerBps":5000} (either party, while DISPUTED; proposeBuyerBps optional)
   {"v":1,"type":"deal.status","dealId":"..."}
 
-Flow: open → seller accepts → I send the buyer a payment request → funded → seller delivers → buyer confirms (or 48h silence) → I pay the seller minus fee. Disputes in v1 refund the buyer minus a small dispute fee. Timeouts auto-refund.`;
+Flow: open → seller accepts → I send the buyer a payment request → funded → seller delivers → buyer confirms (or 48h silence) → I pay the seller minus fee. A dispute opens an evidence window: both parties send deal.evidence, optionally including proposeBuyerBps — a sealed proposed split. If both proposed splits roughly agree, the deal auto-settles at the midpoint with no arbiter; otherwise an AI arbiter reads the deliverable + evidence and rules a split (buyer/seller) minus the arbitration fee. Timeouts auto-refund.`;

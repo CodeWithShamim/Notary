@@ -13,6 +13,7 @@ import { useConnect } from '../state/ConnectContext.js';
 const TERMINAL_LABEL: Partial<Record<string, string>> = {
   RELEASED: 'Released to seller',
   REFUNDED: 'Refunded to buyer',
+  RESOLVED: 'Resolved by arbitration',
   CANCELLED: 'Cancelled',
   EXPIRED: 'Expired unfunded',
 };
@@ -31,6 +32,8 @@ export function DealDetail() {
   const [proof, setProof] = useState('');
   const [disputeReason, setDisputeReason] = useState('');
   const [showDispute, setShowDispute] = useState(false);
+  const [evidence, setEvidence] = useState('');
+  const [evidenceProof, setEvidenceProof] = useState('');
 
   const snap = stored?.snapshot;
   // Merge: DM snapshot is richer; the public API trail keeps us honest if DMs lag.
@@ -57,7 +60,8 @@ export function DealDetail() {
   const path: DealState[] = [...HAPPY_PATH];
   const stepIndex =
     state === 'RELEASED' ? path.length - 1 :
-    state === 'REFUNDED' || state === 'CANCELLED' || state === 'EXPIRED' ? -1 :
+    state === 'REFUNDED' || state === 'CANCELLED' || state === 'EXPIRED' || state === 'RESOLVED' ? -1 :
+    state === 'DISPUTED' ? path.indexOf('DELIVERED_CLAIMED') : // stays on the delivery step while arbitrated
     path.indexOf(state);
 
   const events = (snap?.events ?? trail?.events ?? []) as { at: number; event: string; detail?: string }[];
@@ -67,7 +71,7 @@ export function DealDetail() {
   const symbol = snap?.symbol ?? trail?.symbol ?? '';
   const feePct = (snap?.feeBps ?? trail?.feeBps ?? 100) / 100;
   const deadline = snap?.deadlineAt ?? trail?.deadlineAt ?? null;
-  const showDeadline = deadline && state !== 'RELEASED' && state !== 'REFUNDED';
+  const showDeadline = deadline && state !== 'RELEASED' && state !== 'REFUNDED' && state !== 'RESOLVED';
 
   const aside = (
     <AsideCard title="Deal summary">
@@ -111,12 +115,19 @@ export function DealDetail() {
           ))}
         </div>
       ) : (
-        <div className={`card terminal-card${state === 'REFUNDED' ? ' refunded' : ''}`}>
+        <div className={`card terminal-card${state === 'REFUNDED' || state === 'RESOLVED' ? ' refunded' : ''}`}>
           <b>{TERMINAL_LABEL[state] ?? state}</b>
           {snap?.settlement && (
             <div className="muted mt-sm">
-              {snap.settlement.toBuyer && <>↩ {human(snap.settlement.toBuyer)} returned to @{snap.buyerTag} · </>}
+              {snap.settlement.toBuyer && snap.settlement.toBuyer !== '0' && <>↩ {human(snap.settlement.toBuyer)} to @{snap.buyerTag} · </>}
+              {snap.settlement.toSeller && snap.settlement.toSeller !== '0' && <>→ {human(snap.settlement.toSeller)} to @{snap.sellerTag} · </>}
               {snap.settlement.fee && <>fee retained {human(snap.settlement.fee)}</>}
+            </div>
+          )}
+          {snap?.dispute?.verdict && (
+            <div className="mt-sm">
+              <div className="muted"><b>Arbiter:</b> {snap.dispute.verdict.arbiter} · awarded buyer {(snap.dispute.verdict.buyerBps / 100).toFixed(0)}%</div>
+              {snap.dispute.verdict.rationale && <p className="mt-sm">“{snap.dispute.verdict.rationale}”</p>}
             </div>
           )}
         </div>
@@ -188,7 +199,8 @@ export function DealDetail() {
           <h2>The seller says it's delivered{snap?.events?.some((e) => e.event === 'DELIVERED') ? '' : ''}</h2>
           <p className="muted">
             Confirm to release {human(snap?.amount ?? '0')} {snap?.symbol ?? ''} (minus fee) to @{snap?.sellerTag}. Silence past
-            the deadline counts as acceptance. Disputing (v1 rule) refunds you minus a small dispute fee.
+            the deadline counts as acceptance. Disputing opens an evidence-based arbitration: both sides submit
+            evidence and an AI arbiter rules a fair split of the escrow.
           </p>
           {err && <p className="error-text">{err}</p>}
           {!showDispute ? (
@@ -219,8 +231,49 @@ export function DealDetail() {
         </div>
       )}
 
-      {/* proof display */}
-      {snap && 'proof' in snap === false ? null : null}
+      {/* arbitration: both parties submit evidence while DISPUTED */}
+      {state === 'DISPUTED' && (
+        <div className="card terminal-card refunded">
+          <h2>In arbitration</h2>
+          <p className="muted">
+            This deal is disputed. Both parties may submit evidence; an AI arbiter then reads the deliverable and
+            all evidence and rules a split of the escrow, minus the arbitration fee. The arbiter also rules
+            automatically when the evidence window closes.
+          </p>
+          {snap?.dispute?.buyerEvidence && (
+            <p className="mt-sm"><b>Buyer:</b> <span className="muted">{snap.dispute.buyerEvidence}</span></p>
+          )}
+          {snap?.dispute?.sellerEvidence && (
+            <p className="mt-sm"><b>Seller:</b> <span className="muted">{snap.dispute.sellerEvidence}</span></p>
+          )}
+          {role ? (
+            <div className="mt-md">
+              <label className="field">
+                <span>Your evidence</span>
+                <textarea value={evidence} onChange={(e) => setEvidence(e.target.value)} placeholder="Describe what happened, with any links or references…" />
+              </label>
+              <label className="field">
+                <span>Proof (optional URL or hash)</span>
+                <input value={evidenceProof} onChange={(e) => setEvidenceProof(e.target.value)} placeholder="https://…" />
+              </label>
+              {err && <p className="error-text">{err}</p>}
+              <button
+                className="btn"
+                disabled={busy !== null || evidence.trim().length === 0}
+                onClick={() => void act('evidence', async () => {
+                  await dmNotary({ v: 1, type: 'deal.evidence', dealId, statement: evidence.trim(), proof: evidenceProof.trim() || undefined });
+                  setEvidence('');
+                  setEvidenceProof('');
+                })}
+              >
+                {busy === 'evidence' ? <span className="spinner" /> : 'Submit evidence'}
+              </button>
+            </div>
+          ) : (
+            <p className="muted mt-sm">Only the buyer or seller can submit evidence.</p>
+          )}
+        </div>
+      )}
 
       {/* event timeline */}
       <div className="card">

@@ -20,6 +20,11 @@ export interface DealRow {
   paymentRequestId: string | null;
   fundedTransferId: string | null;
   settlementJson: string | null;
+  buyerEvidence: string | null; //  buyer's dispute reason + submitted evidence
+  sellerEvidence: string | null; // seller's submitted evidence
+  verdictJson: string | null; //    { buyerBps, rationale, arbiter } once RESOLVED
+  buyerProposalBps: number | null; // sealed midpoint-settlement proposal (bps to buyer)
+  sellerProposalBps: number | null; // "
   createdAt: number;
   deadlineAt: number | null;
   updatedAt: number;
@@ -29,7 +34,7 @@ export interface PayoutRow {
   id: number;
   dealId: string | null;
   poolId: string | null;
-  kind: 'release' | 'refund' | 'dispute_refund' | 'pool_payout' | 'pool_refund';
+  kind: 'release' | 'refund' | 'dispute_refund' | 'arbitration' | 'pool_payout' | 'pool_refund';
   recipient: string; // @nametag
   amount: string;
   coinId: string;
@@ -53,6 +58,17 @@ export interface PoolRow {
   purpose: string;
   status: 'open' | 'funded' | 'paid_out' | 'cancelled' | 'expired';
   deadlineAt: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ReputationDealRow {
+  state: DealState;
+  buyerTag: string;
+  sellerTag: string;
+  amount: string;
+  coinId: string;
+  symbol: string | null;
   createdAt: number;
   updatedAt: number;
 }
@@ -103,6 +119,11 @@ export class Store {
         paymentRequestId TEXT,
         fundedTransferId TEXT,
         settlementJson TEXT,
+        buyerEvidence TEXT,
+        sellerEvidence TEXT,
+        verdictJson TEXT,
+        buyerProposalBps INTEGER,
+        sellerProposalBps INTEGER,
         createdAt INTEGER NOT NULL,
         deadlineAt INTEGER,
         updatedAt INTEGER NOT NULL
@@ -171,6 +192,19 @@ export class Store {
         detail TEXT NOT NULL
       );
     `);
+    // Idempotent upgrades for DBs created before arbitration shipped.
+    this.addColumn('deals', 'buyerEvidence', 'TEXT');
+    this.addColumn('deals', 'sellerEvidence', 'TEXT');
+    this.addColumn('deals', 'verdictJson', 'TEXT');
+    this.addColumn('deals', 'buyerProposalBps', 'INTEGER');
+    this.addColumn('deals', 'sellerProposalBps', 'INTEGER');
+  }
+
+  /** ALTER TABLE ADD COLUMN, but a no-op if the column already exists. */
+  private addColumn(table: string, column: string, type: string): void {
+    const cols = this.db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+    if (cols.some((c) => c.name === column)) return;
+    this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
   }
 
   // -- kv --------------------------------------------------------------------
@@ -204,10 +238,12 @@ export class Store {
       .prepare(
         `INSERT INTO deals (dealId, state, buyerPubkey, buyerTag, sellerPubkey, sellerTag, amount,
           coinId, symbol, feeBps, deliverable, deliveryHours, proof, paymentRequestId,
-          fundedTransferId, settlementJson, createdAt, deadlineAt, updatedAt)
+          fundedTransferId, settlementJson, buyerEvidence, sellerEvidence, verdictJson,
+          buyerProposalBps, sellerProposalBps, createdAt, deadlineAt, updatedAt)
          VALUES (@dealId, @state, @buyerPubkey, @buyerTag, @sellerPubkey, @sellerTag, @amount,
           @coinId, @symbol, @feeBps, @deliverable, @deliveryHours, @proof, @paymentRequestId,
-          @fundedTransferId, @settlementJson, @createdAt, @deadlineAt, @updatedAt)`,
+          @fundedTransferId, @settlementJson, @buyerEvidence, @sellerEvidence, @verdictJson,
+          @buyerProposalBps, @sellerProposalBps, @createdAt, @deadlineAt, @updatedAt)`,
       )
       .run(d);
   }
@@ -216,7 +252,10 @@ export class Store {
       .prepare(
         `UPDATE deals SET state=@state, sellerPubkey=@sellerPubkey, proof=@proof,
           paymentRequestId=@paymentRequestId, fundedTransferId=@fundedTransferId,
-          settlementJson=@settlementJson, deadlineAt=@deadlineAt, updatedAt=@updatedAt
+          settlementJson=@settlementJson, buyerEvidence=@buyerEvidence,
+          sellerEvidence=@sellerEvidence, verdictJson=@verdictJson,
+          buyerProposalBps=@buyerProposalBps, sellerProposalBps=@sellerProposalBps,
+          deadlineAt=@deadlineAt, updatedAt=@updatedAt
          WHERE dealId=@dealId`,
       )
       .run(d);
@@ -244,7 +283,7 @@ export class Store {
   totalVolume(): { coinId: string; symbol: string | null; total: string }[] {
     // SQLite sums as float — recompute exactly in JS to keep the no-floats rule.
     const rows = this.db
-      .prepare("SELECT coinId, symbol, amount FROM deals WHERE state IN ('FUNDED','DELIVERED_CLAIMED','RELEASED','REFUNDED')")
+      .prepare("SELECT coinId, symbol, amount FROM deals WHERE state IN ('FUNDED','DELIVERED_CLAIMED','DISPUTED','RELEASED','REFUNDED','RESOLVED')")
       .all() as { coinId: string; symbol: string | null; amount: string }[];
     const sums = new Map<string, { symbol: string | null; total: bigint }>();
     for (const r of rows) {
@@ -253,6 +292,14 @@ export class Store {
       sums.set(r.coinId, cur);
     }
     return [...sums.entries()].map(([coinId, v]) => ({ coinId, symbol: v.symbol, total: v.total.toString() }));
+  }
+
+  /** Reputation-relevant fields for every deal (party tags never leave the agent raw — the
+   *  reputation endpoint aggregates these into per-nametag scores). */
+  reputationRows(): ReputationDealRow[] {
+    return this.db
+      .prepare('SELECT state, buyerTag, sellerTag, amount, coinId, symbol, createdAt, updatedAt FROM deals')
+      .all() as ReputationDealRow[];
   }
 
   // -- deal events (append-only ledger per deal) --------------------------------

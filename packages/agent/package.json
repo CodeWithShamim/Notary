@@ -15,6 +15,7 @@
     "demo:pool": "tsx scripts/demo-pool.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.111.0",
     "@fastify/cors": "^10.0.0",
     "@notary/shared": "*",
     "@unicitylabs/sphere-sdk": "^0.11.10",

@@ -4,6 +4,7 @@ import type { Sphere } from '@unicitylabs/sphere-sdk';
 import { DealState, DealEvent, HELP_TEXT, LEGAL_TRANSITIONS, PROTOCOL_VERSION } from '@notary/shared';
 import { config } from './config.js';
 import { logger } from './logger.js';
+import { computeLeaderboard, computeReputation } from './reputation.js';
 import type { Store } from './db.js';
 import type { Treasury } from './treasury.js';
 
@@ -41,6 +42,11 @@ export async function startApi(sphere: Sphere, store: Store, treasury: Treasury)
       uptimeSec: Math.floor((Date.now() - STARTED_AT) / 1000),
       feeBps: config.feeBps,
       disputeFeeBps: config.disputeFeeBps,
+      arbiter: {
+        mode: config.anthropicApiKey ? 'ai' : 'rule',
+        model: config.anthropicApiKey ? config.arbiterModel : null,
+        disputeWindowMs: config.disputeWindowMs,
+      },
       dealsByState: store.countDealsByState(),
       escrowVolume: store.totalVolume(),
       pools: store.listPools().map((p) => ({
@@ -101,6 +107,15 @@ export async function startApi(sphere: Sphere, store: Store, treasury: Treasury)
     }),
   }));
 
+  // Reputation: derived per-nametag track record. Leaderboard + single lookup.
+  app.get('/api/reputation', async () => ({
+    reputations: computeLeaderboard(store.reputationRows()).slice(0, 100),
+  }));
+
+  app.get<{ Params: { tag: string } }>('/api/reputation/:tag', async (req) => {
+    return computeReputation(store.reputationRows(), req.params.tag);
+  });
+
   app.get('/api/protocol', async () => ({
     protocolVersion: PROTOCOL_VERSION,
     transport: 'NIP-17 encrypted DM to @' + config.nametag + ' (JSON body)',
@@ -114,6 +129,7 @@ export async function startApi(sphere: Sphere, store: Store, treasury: Treasury)
       funding: config.fundingTimeoutMs,
       deliveryDefaultHours: config.defaultDeliveryHours,
       confirm: config.confirmTimeoutMs,
+      disputeWindow: config.disputeWindowMs,
     },
     messages: {
       'deal.open': { direction: 'buyer → notary', fields: { seller: '@nametag', amount: 'base-unit string', coinId: 'hex coinId or registry symbol', deliverable: 'string', deliveryHours: 'int, optional' } },
@@ -124,6 +140,7 @@ export async function startApi(sphere: Sphere, store: Store, treasury: Treasury)
       'deal.delivered': { direction: 'seller → notary', fields: { dealId: '', proof: 'optional URL/hash' } },
       'deal.confirm': { direction: 'buyer → notary', fields: { dealId: '' } },
       'deal.dispute': { direction: 'buyer → notary', fields: { dealId: '', reason: 'optional' } },
+      'deal.evidence': { direction: 'party → notary', fields: { dealId: '', statement: 'string', proof: 'optional URL/hash' } },
       'deal.status': { direction: 'party → notary', fields: { dealId: '' } },
       'deal.update': { direction: 'notary → parties', fields: { deal: 'full DealSnapshot (see @notary/shared)' } },
       error: { direction: 'notary → sender', fields: { code: '', message: '', dealId: 'optional' } },
