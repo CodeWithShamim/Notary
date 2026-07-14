@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { parseTokenAmount } from '@unicitylabs/sphere-sdk';
@@ -7,9 +7,16 @@ import { fetchOffers } from '../lib/api.js';
 import { dmNotary } from '../lib/notary.js';
 import { humanError, uctCoinId } from '../lib/sphere.js';
 import { human, timeLeft } from '../lib/format.js';
-import { SearchIcon, CheckIcon, ArrowRightIcon } from '../components/Icon.js';
-import { PageLayout, AsideCard } from '../components/PageLayout.js';
+import { SearchIcon, CheckIcon, ArrowRightIcon, UserIcon, ClockIcon } from '../components/Icon.js';
 import { useConnect } from '../state/ConnectContext.js';
+
+/* Real offers carry status open | closed | expired. Map each onto the
+   marketplace's visual vocabulary (a coloured dot + label). */
+const STATUS_META: Record<Offer['status'], { label: string; tone: string }> = {
+  open: { label: 'Open', tone: 'open' },
+  closed: { label: 'Closed', tone: 'done' },
+  expired: { label: 'Expired', tone: 'dead' },
+};
 
 export function Marketplace() {
   const { nametag, assets } = useConnect();
@@ -18,65 +25,117 @@ export function Marketplace() {
   const { data, isLoading } = useQuery({ queryKey: ['offers'], queryFn: fetchOffers, refetchInterval: 15_000 });
   const offers = data?.offers ?? [];
 
-  const aside = (
-    <>
-      <AsideCard title="How discovery works">
-        <ol className="aside-steps">
-          <li>
-            <b>Sellers list</b>
-            <span className="astep-sub">Post "I'll do X for Y". Your offer is DM'd to @notary, which curates it and mirrors it to the Unicity intent market.</span>
-          </li>
-          <li>
-            <b>Buyers browse</b>
-            <span className="astep-sub">No need to know a nametag up front — open a fully-prefilled escrow deal straight from a listing.</span>
-          </li>
-          <li>
-            <b>@notary escrows</b>
-            <span className="astep-sub">The deal runs the same trustless flow: fund → deliver → confirm → release.</span>
-          </li>
-        </ol>
-      </AsideCard>
-      <AsideCard title="Good to know">
-        <p className="aside-note">A listing is just a hint. Opening a deal still validates the seller's nametag and amount — the price you fund is the one you confirm in your wallet.</p>
-      </AsideCard>
-    </>
-  );
+  const [q, setQ] = useState('');
+
+  const visible = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    if (!needle) return offers;
+    return offers.filter((o) => `${o.title} ${o.deliverable} ${o.sellerTag}`.toLowerCase().includes(needle));
+  }, [offers, q]);
 
   return (
-    <PageLayout aside={aside}>
-      <h1>Marketplace</h1>
-      <p className="sub">
-        Sellers post what they'll do and for how much; buyers open an escrowed deal from a listing in one click.
-        This closes the "how do two strangers find each other" gap — no nametag needed up front.
-      </p>
+    <div className="mkt">
+      {/* ── Hero ─────────────────────────────────────────────── */}
+      <header className="mkt-hero">
+        <div className="mkt-eyebrow">Open Marketplace</div>
+        <h1 className="mkt-title">
+          Marketplace
+          <span className="mkt-pulse" aria-hidden="true"><i /></span>
+        </h1>
+        <p className="mkt-sub">
+          Sellers post what they'll do and for how much; buyers open an escrowed deal from a listing in one click.
+          This closes the “how do two strangers find each other” gap — no nametag needed up front.
+        </p>
+      </header>
 
-      {nametag && <PostOffer nametag={nametag} assets={assets} onPosted={() => qc.invalidateQueries({ queryKey: ['offers'] })} />}
-
-      <h2 className="mt-xl">Open offers</h2>
-      {isLoading ? (
-        <div className="empty"><span className="spinner" /></div>
-      ) : offers.length === 0 ? (
-        <div className="empty"><div className="big"><SearchIcon size={40} /></div>No open offers yet. Be the first to post one.</div>
-      ) : (
-        <div className="offer-grid">
-          {offers.map((o) => (
-            <OfferCard
-              key={o.offerId}
-              offer={o}
-              mine={o.sellerTag.toLowerCase() === nametag?.toLowerCase()}
-              onOpen={() => nav(`/new?offer=${encodeURIComponent(o.offerId)}`)}
-              onClosed={() => qc.invalidateQueries({ queryKey: ['offers'] })}
+      <div className="mkt-body">
+        <div className="mkt-main">
+          {nametag && (
+            <PostOffer
+              nametag={nametag}
+              assets={assets}
+              onPosted={() => qc.invalidateQueries({ queryKey: ['offers'] })}
             />
-          ))}
+          )}
+
+          <div className="mkt-openbar">
+            <h2 className="mkt-section-title">Open offers</h2>
+            {offers.length > 0 && (
+              <div className="mkt-search">
+                <SearchIcon size={17} />
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search offers…" />
+              </div>
+            )}
+          </div>
+
+          {isLoading ? (
+            <div className="mkt-empty"><span className="spinner" /></div>
+          ) : visible.length === 0 ? (
+            <div className="mkt-empty">
+              <div className="mkt-empty-ico"><SearchIcon size={38} /></div>
+              {offers.length === 0 ? 'No open offers yet. Be the first to post one.' : 'No offers match your search.'}
+            </div>
+          ) : (
+            <div className="mkt-grid">
+              {visible.map((o) => (
+                <OfferCard
+                  key={o.offerId}
+                  offer={o}
+                  mine={o.sellerTag.toLowerCase() === nametag?.toLowerCase()}
+                  onOpen={() => nav(`/new?offer=${encodeURIComponent(o.offerId)}`)}
+                  onClosed={() => qc.invalidateQueries({ queryKey: ['offers'] })}
+                />
+              ))}
+            </div>
+          )}
         </div>
-      )}
-    </PageLayout>
+
+        {/* ── Contextual aside ───────────────────────────────── */}
+        <aside className="mkt-aside">
+          <section className="mkt-panel">
+            <div className="mkt-panel-title">How discovery works</div>
+            <ol className="mkt-steps">
+              <li>
+                <b>Sellers list</b>
+                <span>Post “I'll do X for Y”. Your offer is DM'd to @notary, which curates it and mirrors it to the Unicity intent market.</span>
+              </li>
+              <li>
+                <b>Buyers browse</b>
+                <span>No need to know a nametag up front — open a fully-prefilled escrow deal straight from a listing.</span>
+              </li>
+              <li>
+                <b>@notary escrows</b>
+                <span>The deal runs the same trustless flow: fund → deliver → confirm → release.</span>
+              </li>
+            </ol>
+          </section>
+          <section className="mkt-panel">
+            <div className="mkt-panel-title">Good to know</div>
+            <p className="mkt-panel-note">
+              A listing is just a hint. Opening a deal still validates the seller's nametag and amount — the price you
+              fund is the one you confirm in your wallet.
+            </p>
+          </section>
+        </aside>
+      </div>
+    </div>
   );
 }
 
-function OfferCard({ offer, mine, onOpen, onClosed }: { offer: Offer; mine: boolean; onOpen: () => void; onClosed: () => void }) {
+function OfferCard({
+  offer,
+  mine,
+  onOpen,
+  onClosed,
+}: {
+  offer: Offer;
+  mine: boolean;
+  onOpen: () => void;
+  onClosed: () => void;
+}) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const meta = STATUS_META[offer.status];
   const staged = offer.milestones && offer.milestones.length > 1;
 
   const close = async () => {
@@ -93,27 +152,37 @@ function OfferCard({ offer, mine, onOpen, onClosed }: { offer: Offer; mine: bool
   };
 
   return (
-    <div className="card offer-card">
-      <div className="spread">
-        <h3 className="offer-title">{offer.title}</h3>
-        {staged && <span className="badge">{offer.milestones!.length} milestones</span>}
+    <div className="mkt-card">
+      <div className="mkt-card-top">
+        <span className={`mkt-status dot-${meta.tone}`}>
+          <i className="mkt-chip-dot" /> {meta.label}
+        </span>
+        {staged && <span className="mkt-tag">{offer.milestones!.length} milestones</span>}
       </div>
-      <p className="muted offer-deliverable">{offer.deliverable}</p>
-      <div className="aside-kv">
-        <div className="kv"><span className="k">Seller</span><span className="v">@{offer.sellerTag}</span></div>
-        <div className="kv"><span className="k">Price</span><span className="v gold">{human(offer.amount)} {offer.symbol ?? ''}</span></div>
-        <div className="kv"><span className="k">Delivery</span><span className="v">{offer.deliveryHours}h{staged ? ' (first stage)' : ''}</span></div>
-        <div className="kv"><span className="k">Listed until</span><span className="v muted">{timeLeft(offer.expiresAt)}</span></div>
+
+      <h3 className="mkt-card-title">{offer.title}</h3>
+      <p className="mkt-card-desc">{offer.deliverable}</p>
+
+      <div className="mkt-card-price">
+        {human(offer.amount)} <span>{offer.symbol ?? ''}</span>
       </div>
+
+      <dl className="mkt-kv">
+        <div><dt><UserIcon size={13} /> Seller</dt><dd>{mine ? 'You' : `@${offer.sellerTag}`}</dd></div>
+        <div><dt><ClockIcon size={13} /> Delivery</dt><dd>{offer.deliveryHours}h{staged ? ' (first stage)' : ''}</dd></div>
+        <div><dt>Listed until</dt><dd className="dim">{timeLeft(offer.expiresAt)}</dd></div>
+      </dl>
+
       {err && <p className="error-text">{err}</p>}
-      <div className="row">
+
+      <div className="mkt-card-foot">
         {mine ? (
-          <button className="btn secondary" disabled={busy} onClick={() => void close()}>
+          <button className="mkt-btn ghost block" disabled={busy} onClick={() => void close()}>
             {busy ? <span className="spinner" /> : 'Close listing'}
           </button>
         ) : (
-          <button className="btn" onClick={onOpen}>
-            <span className="btn-ico">Open a deal <ArrowRightIcon size={16} /></span>
+          <button className="mkt-btn primary block" onClick={onOpen}>
+            Open a deal <ArrowRightIcon size={16} />
           </button>
         )}
       </div>
@@ -180,22 +249,22 @@ function PostOffer({
 
   if (!open) {
     return (
-      <div className="card">
-        <div className="spread">
-          <div>
-            <h2>Selling something?</h2>
-            <p className="muted">Post a public offer as <b>@{nametag}</b>. Buyers open an escrowed deal from it.</p>
-          </div>
-          <button className="btn" onClick={() => { setOpen(true); setDone(false); }}>Post an offer</button>
+      <div className="mkt-sell">
+        <div>
+          <h2>Selling something?</h2>
+          <p className="muted">Post a public offer as <b>@{nametag}</b>. Buyers open an escrowed deal from it.</p>
         </div>
+        <button className="mkt-btn primary" onClick={() => { setOpen(true); setDone(false); }}>Post an offer</button>
       </div>
     );
   }
 
   return (
-    <div className="card">
-      <h2 className="with-ico">Post an offer {done && <CheckIcon size={18} className="inline-ico ok" />}</h2>
-      {done && <p className="muted">Your offer is live. It appears below and is mirrored to the intent market. Post another or collapse this panel.</p>}
+    <div className="mkt-post">
+      <div className="mkt-post-head">
+        <h2 className="with-ico">Post an offer {done && <CheckIcon size={18} className="inline-ico ok" />}</h2>
+        {done && <p className="muted">Your offer is live. It appears below and is mirrored to the intent market. Post another or collapse this panel.</p>}
+      </div>
       <label className="field">
         <span>Title</span>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Logo design — 3 concepts in 48h" maxLength={120} />
@@ -225,10 +294,10 @@ function PostOffer({
       </label>
       {err && <p className="error-text">{err}</p>}
       <div className="row">
-        <button className="btn" disabled={!valid || sending} onClick={() => void submit()}>
+        <button className="mkt-btn primary" disabled={!valid || sending} onClick={() => void submit()}>
           {sending ? <span className="spinner" /> : 'Post offer to @notary'}
         </button>
-        <button className="btn secondary" onClick={() => setOpen(false)}>Done</button>
+        <button className="mkt-btn ghost" onClick={() => setOpen(false)}>Done</button>
       </div>
     </div>
   );

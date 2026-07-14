@@ -37,40 +37,44 @@ export function Navbar() {
 
   return (
     <header className="topbar">
-      <Link to="/" className="wordmark" aria-label="Notary home">
-        <span className="seal"><ScaleIcon size={20} /></span> Notary
-      </Link>
+      {/* Utility row: brand on the left, live status + controls on the right. */}
+      <div className="topbar-main">
+        <Link to="/" className="wordmark" aria-label="Notary home">
+          <span className="seal"><ScaleIcon size={20} /></span> Notary
+        </Link>
 
-      <nav className="mainnav" aria-label="Primary">
+        <div className="topbar-utils">
+          <div className="topbar-agent">
+            <AgentStatusBadge />
+          </div>
+          <div className="topbar-theme">
+            <ThemeToggle />
+          </div>
+          <div className="topbar-wallet">
+            <WalletWidget />
+          </div>
+        </div>
+
+        <button
+          className={`nav-toggle${open ? ' open' : ''}`}
+          aria-label={open ? 'Close menu' : 'Open menu'}
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+      </div>
+
+      {/* Sub navigation row: primary section links with an underline indicator. */}
+      <nav className="subnav" aria-label="Primary">
         {LINKS.map(({ to, label, end, Icon }) => (
           <NavLink key={to} to={to} end={end} className={({ isActive }) => (isActive ? 'active' : '')}>
-            <Icon size={17} className="nav-ico" /> {label}
+            <Icon size={16} className="nav-ico" /> {label}
           </NavLink>
         ))}
       </nav>
-
-      <div className="topbar-agent">
-        <AgentStatusBadge />
-      </div>
-
-      <div className="topbar-theme">
-        <ThemeToggle />
-      </div>
-
-      <div className="topbar-wallet">
-        <WalletWidget />
-      </div>
-
-      <button
-        className={`nav-toggle${open ? ' open' : ''}`}
-        aria-label={open ? 'Close menu' : 'Open menu'}
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-      >
-        <span />
-        <span />
-        <span />
-      </button>
 
       {open && <div className="nav-scrim" onClick={() => setOpen(false)} />}
 

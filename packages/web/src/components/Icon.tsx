@@ -196,3 +196,46 @@ export const ScaleIcon = (p: IconProps) => (
     <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" />
   </Base>
 );
+
+/* ── Marketplace ────────────────────────────────────────────── */
+
+export const CalendarIcon = (p: IconProps) => (
+  <Base {...p}>
+    <rect x="3" y="4.5" width="18" height="16" rx="2.2" />
+    <path d="M3 9h18M8 3v3.5M16 3v3.5" />
+  </Base>
+);
+
+export const UserIcon = (p: IconProps) => (
+  <Base {...p}>
+    <circle cx="12" cy="8" r="3.6" />
+    <path d="M5 20c0-3.6 3.1-5.6 7-5.6s7 2 7 5.6" />
+  </Base>
+);
+
+export const HeartIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M12 20.5 4.5 13a4.6 4.6 0 0 1 6.5-6.5l1 1 1-1A4.6 4.6 0 0 1 19.5 13Z" />
+  </Base>
+);
+
+export const SlidersIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M4 8h9M17 8h3M4 16h3M11 16h9" />
+    <circle cx="15" cy="8" r="2.2" />
+    <circle cx="9" cy="16" r="2.2" />
+  </Base>
+);
+
+export const AlertTriangleIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M12 4.5 21 19.5H3Z" />
+    <path d="M12 10v4M12 17h.01" />
+  </Base>
+);
+
+export const ChevronDownIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="m6 9.5 6 6 6-6" />
+  </Base>
+);

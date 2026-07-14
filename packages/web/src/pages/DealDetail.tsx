@@ -1,6 +1,6 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { HAPPY_PATH, type DealState } from '@notary/shared';
 import { fetchDealTrail } from '../lib/api.js';
 import { SearchIcon, CheckIcon, ClockIcon } from '../components/Icon.js';
@@ -20,7 +20,8 @@ const TERMINAL_LABEL: Partial<Record<string, string>> = {
 
 export function DealDetail() {
   const { dealId = '' } = useParams();
-  const { deals, nametag, fundEscrow } = useConnect();
+  const { deals, nametag, fundEscrow, refreshDeals } = useConnect();
+  const qc = useQueryClient();
   const stored = deals[dealId];
   const { data: trail } = useQuery({
     queryKey: ['trail', dealId],
@@ -34,28 +35,68 @@ export function DealDetail() {
   const [showDispute, setShowDispute] = useState(false);
   const [evidence, setEvidence] = useState('');
   const [evidenceProof, setEvidenceProof] = useState('');
+  // Optimistic overlay: the notary agent settles a signed action asynchronously
+  // (it detects the transfer / reads the DM, then emits deal.update). Until that
+  // lands we show the expected next state so the just-clicked button doesn't linger.
+  const [optimistic, setOptimistic] = useState<{ from: DealState; to: DealState } | null>(null);
+  const syncTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const snap = stored?.snapshot;
   // Merge: DM snapshot is richer; the public API trail keeps us honest if DMs lag.
-  const state = (snap?.state ?? trail?.state ?? 'PROPOSED') as DealState;
-  if (!snap && !trail) {
-    return <div className="empty"><div className="big"><SearchIcon size={40} /></div>Deal {dealId} isn't known to this browser yet.</div>;
-  }
+  const realState = (snap?.state ?? trail?.state ?? 'PROPOSED') as DealState;
+  // Show the optimistic target only while reality still sits on the pre-action state.
+  const state = optimistic && realState === optimistic.from ? optimistic.to : realState;
+
+  // Once the agent's update advances (or diverges from) the pre-action state, drop the overlay.
+  useEffect(() => {
+    if (optimistic && realState !== optimistic.from) setOptimistic(null);
+  }, [realState, optimistic]);
+
+  // Burst-poll the DM/trail after a signed action so the agent's deal.update is
+  // picked up within ~2s instead of waiting on the 8s background poll.
+  const startSync = useCallback(() => {
+    if (syncTimer.current) clearInterval(syncTimer.current);
+    const pull = () => {
+      void refreshDeals();
+      void qc.invalidateQueries({ queryKey: ['trail', dealId] });
+    };
+    pull();
+    let tries = 0;
+    syncTimer.current = setInterval(() => {
+      pull();
+      if (++tries >= 15 && syncTimer.current) {
+        clearInterval(syncTimer.current);
+        syncTimer.current = null;
+        // Reality never advanced — stop lying and let the background poll reconcile.
+        setOptimistic(null);
+      }
+    }, 2000);
+  }, [refreshDeals, qc, dealId]);
+
+  useEffect(() => () => {
+    if (syncTimer.current) clearInterval(syncTimer.current);
+  }, []);
 
   const isBuyer = snap?.buyerTag?.toLowerCase() === nametag?.toLowerCase();
   const isSeller = snap?.sellerTag?.toLowerCase() === nametag?.toLowerCase();
 
-  const act = async (label: string, fn: () => Promise<unknown>) => {
+  const act = async (label: string, expected: DealState | null, fn: () => Promise<unknown>) => {
     setBusy(label);
     setErr(null);
     try {
       await fn();
+      if (expected) setOptimistic({ from: realState, to: expected });
+      startSync();
     } catch (e) {
       setErr(humanError(e));
     } finally {
       setBusy(null);
     }
   };
+
+  if (!snap && !trail) {
+    return <div className="empty"><div className="big"><SearchIcon size={40} /></div>Deal {dealId} isn't known to this browser yet.</div>;
+  }
 
   const path: DealState[] = [...HAPPY_PATH];
   const stepIndex =
@@ -147,7 +188,7 @@ export function DealDetail() {
             <button
               className="btn"
               disabled={busy !== null}
-              onClick={() => void act('pay', () =>
+              onClick={() => void act('pay', 'FUNDED', () =>
                 fundEscrow({ dealId, amount: snap.amount, coinId: snap.coinId, symbol: snap.symbol }),
               )}
             >
@@ -164,10 +205,10 @@ export function DealDetail() {
           <p className="muted">Accept and the buyer is asked to fund {human(snap?.amount ?? '0')} {snap?.symbol ?? ''} into escrow before you start work.</p>
           {err && <p className="error-text">{err}</p>}
           <div className="row">
-            <button className="btn" disabled={busy !== null} onClick={() => void act('accept', () => dmNotary({ v: 1, type: 'deal.accept', dealId }))}>
+            <button className="btn" disabled={busy !== null} onClick={() => void act('accept', 'AWAITING_FUNDS', () => dmNotary({ v: 1, type: 'deal.accept', dealId }))}>
               {busy === 'accept' ? <span className="spinner" /> : 'Accept deal'}
             </button>
-            <button className="btn danger" disabled={busy !== null} onClick={() => void act('reject', () => dmNotary({ v: 1, type: 'deal.reject', dealId }))}>
+            <button className="btn danger" disabled={busy !== null} onClick={() => void act('reject', 'CANCELLED', () => dmNotary({ v: 1, type: 'deal.reject', dealId }))}>
               Reject
             </button>
           </div>
@@ -186,7 +227,7 @@ export function DealDetail() {
           <button
             className="btn"
             disabled={busy !== null}
-            onClick={() => void act('delivered', () => dmNotary({ v: 1, type: 'deal.delivered', dealId, proof: proof.trim() || undefined }))}
+            onClick={() => void act('delivered', 'DELIVERED_CLAIMED', () => dmNotary({ v: 1, type: 'deal.delivered', dealId, proof: proof.trim() || undefined }))}
           >
             {busy === 'delivered' ? <span className="spinner" /> : 'Mark as delivered'}
           </button>
@@ -239,7 +280,7 @@ export function DealDetail() {
           {err && <p className="error-text">{err}</p>}
           {!showDispute ? (
             <div className="row">
-              <button className="btn" disabled={busy !== null} onClick={() => void act('confirm', () => dmNotary({ v: 1, type: 'deal.confirm', dealId }))}>
+              <button className="btn" disabled={busy !== null} onClick={() => void act('confirm', 'RELEASED', () => dmNotary({ v: 1, type: 'deal.confirm', dealId }))}>
                 {busy === 'confirm' ? <span className="spinner" /> : <span className="btn-ico">Confirm delivery <CheckIcon size={16} /></span>}
               </button>
               <button className="btn danger" disabled={busy !== null} onClick={() => setShowDispute(true)}>Dispute…</button>
@@ -254,7 +295,7 @@ export function DealDetail() {
                 <button
                   className="btn danger"
                   disabled={busy !== null}
-                  onClick={() => void act('dispute', () => dmNotary({ v: 1, type: 'deal.dispute', dealId, reason: disputeReason.trim() || undefined }))}
+                  onClick={() => void act('dispute', 'DISPUTED', () => dmNotary({ v: 1, type: 'deal.dispute', dealId, reason: disputeReason.trim() || undefined }))}
                 >
                   {busy === 'dispute' ? <span className="spinner" /> : 'File dispute'}
                 </button>
@@ -294,7 +335,7 @@ export function DealDetail() {
               <button
                 className="btn"
                 disabled={busy !== null || evidence.trim().length === 0}
-                onClick={() => void act('evidence', async () => {
+                onClick={() => void act('evidence', null, async () => {
                   await dmNotary({ v: 1, type: 'deal.evidence', dealId, statement: evidence.trim(), proof: evidenceProof.trim() || undefined });
                   setEvidence('');
                   setEvidenceProof('');

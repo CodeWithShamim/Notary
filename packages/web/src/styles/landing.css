@@ -35,6 +35,9 @@
      edge-to-edge; inner sections re-constrain the content width. */
   width: 100vw;
   margin-inline: calc(50% - 50vw);
+  /* Pull flush against the navbar — cancels the global .topbar bottom margin
+     so the dark hero meets the header with no light gap between them. */
+  margin-top: -26px;
   font-family: var(--lp-font-body);
   color: var(--lp-text);
   /* deep canvas glow that sits behind the whole landing experience */
