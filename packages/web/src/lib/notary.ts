@@ -11,6 +11,8 @@ const SIGN_LABEL: Partial<Record<NotaryMessage['type'], string>> = {
   'deal.delivered': 'Mark as delivered',
   'deal.confirm': 'Confirm delivery',
   'deal.dispute': 'File dispute',
+  'offer.post': 'Post offer',
+  'offer.close': 'Close offer',
 };
 
 /**

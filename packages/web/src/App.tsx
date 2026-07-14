@@ -9,6 +9,7 @@ import { PageTransition } from './components/PageTransition.js';
 import { RouteProgressBar } from './components/loaders/index.js';
 import { Home } from './pages/Home.js';
 import { NewDeal } from './pages/NewDeal.js';
+import { Marketplace } from './pages/Marketplace.js';
 import { MyDeals } from './pages/MyDeals.js';
 import { DealDetail } from './pages/DealDetail.js';
 import { AgentStatus } from './pages/AgentStatus.js';
@@ -39,6 +40,7 @@ export default function App() {
       <PageTransition>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/market" element={<Marketplace />} />
           <Route path="/new" element={<NewDeal />} />
           <Route path="/deals" element={<MyDeals />} />
           <Route path="/deals/:dealId" element={<DealDetail />} />

@@ -14,6 +14,7 @@ import {
   nextState,
   parseMessage,
   releaseSplit,
+  validateDealShape,
   type NotaryMessage,
 } from './protocol.js';
 
@@ -85,9 +86,13 @@ describe('state machine table', () => {
     expect(nextState(DealState.FUNDED, DealEvent.DELIVERY_TIMEOUT)).toBe(DealState.REFUNDED);
     expect(nextState(DealState.DELIVERED_CLAIMED, DealEvent.CONFIRM)).toBe(DealState.RELEASED);
     expect(nextState(DealState.DELIVERED_CLAIMED, DealEvent.DISPUTE)).toBe(DealState.DISPUTED);
+    // Silence now opens a short appeal window before the release finalizes (feature 5).
     expect(nextState(DealState.DELIVERED_CLAIMED, DealEvent.CONFIRM_TIMEOUT)).toBe(
-      DealState.RELEASED,
+      DealState.RELEASE_PENDING,
     );
+    expect(nextState(DealState.RELEASE_PENDING, DealEvent.CONFIRM)).toBe(DealState.RELEASED);
+    expect(nextState(DealState.RELEASE_PENDING, DealEvent.DISPUTE)).toBe(DealState.DISPUTED);
+    expect(nextState(DealState.RELEASE_PENDING, DealEvent.APPEAL_TIMEOUT)).toBe(DealState.RELEASED);
     expect(nextState(DealState.DISPUTED, DealEvent.RESOLVE)).toBe(DealState.RESOLVED);
   });
 
@@ -101,8 +106,8 @@ describe('state machine table', () => {
         else legal++;
       }
     }
-    expect(legal).toBe(11);
-    expect(illegal).toBe(DEAL_STATES.length * Object.values(DealEvent).length - 11);
+    expect(legal).toBe(14);
+    expect(illegal).toBe(DEAL_STATES.length * Object.values(DealEvent).length - 14);
   });
 
   it('terminal states have no outgoing transitions', () => {
@@ -133,6 +138,38 @@ describe('wire protocol parsing', () => {
     const res = parseMessage(JSON.stringify({ ...open, amount: '5.5' }));
     expect(res).toMatchObject({ ok: false, malformed: true });
     if (!res.ok) expect(res.issues).toContain('amount');
+  });
+
+  it('round-trips a staged (milestone) deal.open', () => {
+    const staged: NotaryMessage = {
+      v: 1,
+      type: 'deal.open',
+      seller: '@bob',
+      coinId: 'abc123',
+      milestones: [
+        { amount: '300000', deliverable: 'draft', deliveryHours: 48 },
+        { amount: '700000', deliverable: 'final' },
+      ],
+    };
+    const res = parseMessage(encodeMessage(staged));
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.msg).toEqual(staged);
+  });
+
+  it('rejects a milestone deal with fewer than 2 milestones', () => {
+    const res = parseMessage(
+      JSON.stringify({ v: 1, type: 'deal.open', seller: '@bob', coinId: 'abc', milestones: [{ amount: '100', deliverable: 'x' }] }),
+    );
+    expect(res).toMatchObject({ ok: false, malformed: true });
+  });
+
+  it('validateDealShape enforces exactly one of {single, milestones}', () => {
+    expect(validateDealShape({ amount: '100', deliverable: 'x' })).toBeNull();
+    expect(validateDealShape({ milestones: [{}, {}] })).toBeNull();
+    // both → rejected
+    expect(validateDealShape({ amount: '100', deliverable: 'x', milestones: [{}, {}] })).not.toBeNull();
+    // neither → rejected
+    expect(validateDealShape({})).not.toBeNull();
   });
 
   it('rejects unknown protocol version as malformed', () => {
@@ -185,6 +222,31 @@ describe('wire protocol parsing', () => {
     expect(res.ok).toBe(true);
   });
 
+  it('round-trips offer.post and offer.close', () => {
+    const post: NotaryMessage = {
+      v: 1,
+      type: 'offer.post',
+      title: 'Logo design in 48h',
+      amount: '5000000',
+      coinId: 'UCT',
+      deliverable: '3 concepts + source files',
+      deliveryHours: 48,
+    };
+    const close: NotaryMessage = { v: 1, type: 'offer.close', offerId: 'offer_abcd' };
+    for (const m of [post, close]) {
+      const res = parseMessage(encodeMessage(m));
+      expect(res.ok).toBe(true);
+      if (res.ok) expect(res.msg).toEqual(m);
+    }
+  });
+
+  it('rejects an offer.post with a too-short title', () => {
+    const res = parseMessage(
+      JSON.stringify({ v: 1, type: 'offer.post', title: 'x', amount: '100', coinId: 'UCT', deliverable: 'y' }),
+    );
+    expect(res).toMatchObject({ ok: false, malformed: true });
+  });
+
   it('help text mentions every command', () => {
     for (const cmd of [
       'deal.open',
@@ -194,8 +256,17 @@ describe('wire protocol parsing', () => {
       'deal.confirm',
       'deal.dispute',
       'deal.status',
+      'offer.post',
+      'offer.close',
     ]) {
       expect(HELP_TEXT).toContain(cmd);
     }
+  });
+});
+
+describe('appeal-window state (feature 5)', () => {
+  it('RELEASE_PENDING is a known, non-terminal state', () => {
+    expect(DEAL_STATES).toContain(DealState.RELEASE_PENDING);
+    expect(TERMINAL_STATES.has(DealState.RELEASE_PENDING)).toBe(false);
   });
 });

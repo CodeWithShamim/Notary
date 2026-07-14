@@ -16,22 +16,27 @@ import {
   amountToBigint,
   encodeMessage,
   parseMessage,
+  validateDealShape,
   type DealOpen,
   type DealSnapshot,
+  type Milestone,
+  type MilestoneStateEntry,
   type NotaryMessage,
+  type OfferPost,
 } from '@notary/shared';
 import { config } from './config.js';
 import { dealLogger, logger } from './logger.js';
-import { TIMEOUT_EVENT_FOR_STATE, transition, type Effect } from './machine.js';
+import { TIMEOUT_EVENT_FOR_STATE, transition, type Effect, type MilestonePlanEntry } from './machine.js';
 import { judge, type Verdict } from './arbiter.js';
 import { withRetry } from './retry.js';
-import type { DealRow, PayoutRow, Store } from './db.js';
+import type { DealRow, OfferRow, PayoutRow, Store } from './db.js';
 
 const machineCfg = {
   disputeFeeBps: config.disputeFeeBps,
   fundingTimeoutMs: config.fundingTimeoutMs,
   confirmTimeoutMs: config.confirmTimeoutMs,
   disputeWindowMs: config.disputeWindowMs,
+  appealWindowMs: config.appealWindowMs,
 };
 
 export class DealService {
@@ -133,6 +138,10 @@ export class DealService {
           return await this.handleEvidence(msg, m.dealId, m.statement, m.proof, m.proposeBuyerBps);
         case 'deal.status':
           return await this.handleStatus(msg, m.dealId);
+        case 'offer.post':
+          return await this.handleOfferPost(msg, m);
+        case 'offer.close':
+          return await this.handleOfferClose(msg, m.offerId);
         default:
           // Protocol messages the agent itself emits (deal.update, deal.invite,
           // error, ...) arriving inbound are echoes/noise — ignore.
@@ -151,12 +160,21 @@ export class DealService {
   }
 
   private async handleOpen(msg: DirectMessage, m: DealOpen): Promise<void> {
-    const amount = amountToBigint(m.amount);
-    if (amount < config.minEscrow || amount > config.maxEscrow) {
+    // Enforce the single-vs-staged shape (schema keeps both optional so it can
+    // stay a discriminated-union member; the meaning is checked here).
+    const shapeErr = validateDealShape(m);
+    if (shapeErr) return this.replyError(msg.senderPubkey, ErrorCode.BAD_MESSAGE, shapeErr);
+
+    // Build the milestone plan (staged) or a single-leg plan, validating amounts.
+    const built = this.buildPlan(m.milestones, m.amount, m.deliverable, m.deliveryHours);
+    if ('error' in built) return this.replyError(msg.senderPubkey, built.code, built.error);
+    const { plan, totalAmount, active } = built;
+
+    if (totalAmount < config.minEscrow || totalAmount > config.maxEscrow) {
       return this.replyError(
         msg.senderPubkey,
         ErrorCode.AMOUNT_OUT_OF_RANGE,
-        `Escrow must be between ${config.minEscrow} and ${config.maxEscrow} base units.`,
+        `Total escrow must be between ${config.minEscrow} and ${config.maxEscrow} base units${plan ? ' (summed across milestones)' : ''}.`,
       );
     }
 
@@ -191,12 +209,12 @@ export class DealService {
       buyerTag,
       sellerPubkey: null,
       sellerTag,
-      amount: amount.toString(),
+      amount: active.amount, //           active (first) milestone amount for a staged deal
       coinId,
       symbol,
       feeBps: config.feeBps,
-      deliverable: m.deliverable,
-      deliveryHours: m.deliveryHours ?? config.defaultDeliveryHours,
+      deliverable: active.deliverable,
+      deliveryHours: active.deliveryHours,
       proof: null,
       paymentRequestId: null,
       fundedTransferId: null,
@@ -206,6 +224,9 @@ export class DealService {
       verdictJson: null,
       buyerProposalBps: null,
       sellerProposalBps: null,
+      milestonesJson: plan ? JSON.stringify(plan) : null,
+      currentMilestone: plan ? 0 : null,
+      totalAmount: totalAmount.toString(),
       createdAt: now,
       deadlineAt: now + config.acceptTimeoutMs,
       updatedAt: now,
@@ -214,6 +235,9 @@ export class DealService {
     // Invite the seller FIRST — if their nametag doesn't resolve
     // (INVALID_RECIPIENT), the deal is never created.
     const log = dealLogger(deal.dealId);
+    const inviteDeliverable = plan
+      ? `Staged deal — ${plan.length} milestones, total ${deal.totalAmount} ${deal.symbol ?? deal.coinId}. First: ${active.deliverable}`
+      : deal.deliverable;
     try {
       await this.sphere.communications.sendDM(
         `@${sellerTag}`,
@@ -226,10 +250,12 @@ export class DealService {
           amount: deal.amount,
           coinId: deal.coinId,
           symbol: deal.symbol ?? undefined,
-          deliverable: deal.deliverable,
+          deliverable: inviteDeliverable,
           deliveryHours: deal.deliveryHours,
           feeBps: deal.feeBps,
           acceptBy: deal.deadlineAt!,
+          milestones: m.milestones,
+          totalAmount: plan ? deal.totalAmount : undefined,
         }),
       );
     } catch (err) {
@@ -242,10 +268,51 @@ export class DealService {
     }
 
     this.store.insertDeal(deal);
-    this.store.addDealEvent(deal.dealId, 'OPENED', `buyer @${buyerTag} → seller @${sellerTag}, ${deal.amount} ${deal.symbol ?? deal.coinId}`);
+    const shape = plan ? `${plan.length} milestones, total ${deal.totalAmount}` : `${deal.amount}`;
+    this.store.addDealEvent(deal.dealId, 'OPENED', `buyer @${buyerTag} → seller @${sellerTag}, ${shape} ${deal.symbol ?? deal.coinId}`);
     this.store.addDealEvent(deal.dealId, 'INVITED', `acceptance deadline ${new Date(deal.deadlineAt!).toISOString()}`);
-    log.info({ buyerTag, sellerTag, amount: deal.amount }, 'deal opened');
+    log.info({ buyerTag, sellerTag, amount: deal.amount, milestones: plan?.length ?? 0 }, 'deal opened');
     await this.broadcastUpdate(deal);
+  }
+
+  /** Validate + normalize a deal/offer's amount shape into a milestone plan (or a
+   *  single-leg plan) plus the summed total and the active (first) leg. Returns an
+   *  error object on any invalid amount. Bounds on the TOTAL are checked by the caller. */
+  private buildPlan(
+    milestones: Milestone[] | undefined,
+    singleAmount: string | undefined,
+    singleDeliverable: string | undefined,
+    singleHours: number | undefined,
+  ):
+    | { plan: MilestonePlanEntry[] | null; totalAmount: bigint; active: { amount: string; deliverable: string; deliveryHours: number } }
+    | { error: string; code: ErrorCode } {
+    if (milestones) {
+      if (milestones.length > config.maxMilestones) {
+        return { error: `Too many milestones (max ${config.maxMilestones}).`, code: ErrorCode.BAD_MESSAGE };
+      }
+      let total = 0n;
+      const plan: MilestonePlanEntry[] = [];
+      for (let i = 0; i < milestones.length; i++) {
+        const ms = milestones[i]!;
+        const a = amountToBigint(ms.amount); // zAmount already guarantees a non-negative integer string
+        if (a <= 0n) return { error: `Milestone ${i + 1} amount must be greater than zero.`, code: ErrorCode.AMOUNT_OUT_OF_RANGE };
+        total += a;
+        plan.push({
+          index: i,
+          amount: a.toString(),
+          deliverable: ms.deliverable,
+          deliveryHours: ms.deliveryHours ?? config.defaultDeliveryHours,
+          state: i === 0 ? 'active' : 'pending',
+        });
+      }
+      return { plan, totalAmount: total, active: plan[0]! };
+    }
+    const amount = amountToBigint(singleAmount!);
+    return {
+      plan: null,
+      totalAmount: amount,
+      active: { amount: amount.toString(), deliverable: singleDeliverable!, deliveryHours: singleHours ?? config.defaultDeliveryHours },
+    };
   }
 
   /** Shared path for all party-triggered events: authenticate, transition, execute. */
@@ -407,6 +474,136 @@ export class DealService {
   }
 
   // ---------------------------------------------------------------------------
+  // Marketplace offers — sellers list; the agent curates + mirrors to the market
+  // ---------------------------------------------------------------------------
+
+  private async handleOfferPost(msg: DirectMessage, m: OfferPost): Promise<void> {
+    const shapeErr = validateDealShape(m);
+    if (shapeErr) return this.replyError(msg.senderPubkey, ErrorCode.BAD_MESSAGE, shapeErr);
+
+    const built = this.buildPlan(m.milestones, m.amount, m.deliverable, m.deliveryHours);
+    if ('error' in built) return this.replyError(msg.senderPubkey, built.code, built.error);
+    const { plan, totalAmount, active } = built;
+    if (totalAmount < config.minEscrow || totalAmount > config.maxEscrow) {
+      return this.replyError(
+        msg.senderPubkey,
+        ErrorCode.AMOUNT_OUT_OF_RANGE,
+        `Offer price must be between ${config.minEscrow} and ${config.maxEscrow} base units.`,
+      );
+    }
+
+    const bySymbol = getCoinIdBySymbol(m.coinId);
+    const coinId = bySymbol ?? m.coinId;
+    const symbol = bySymbol ? m.coinId.toUpperCase() : (getTokenSymbol(coinId) || null);
+    if (config.allowedCoins.length && !config.allowedCoins.includes(coinId) && !(symbol && config.allowedCoins.includes(symbol))) {
+      return this.replyError(msg.senderPubkey, ErrorCode.UNSUPPORTED_COIN, `This notary escrows only: ${config.allowedCoins.join(', ')}`);
+    }
+
+    // The seller must be payable — an offer is only useful if a deal can settle to them.
+    const sellerTag =
+      msg.senderNametag ?? (await this.sphere.communications.resolvePeerNametag(msg.senderPubkey).catch(() => undefined));
+    if (!sellerTag) {
+      return this.replyError(
+        msg.senderPubkey,
+        ErrorCode.UNRESOLVABLE_PARTY,
+        'You need a registered nametag to post an offer — buyers pay deals out to it. Register one and retry.',
+      );
+    }
+
+    if (this.store.countOpenOffersBySeller(msg.senderPubkey) >= config.maxOpenOffersPerSeller) {
+      return this.replyError(
+        msg.senderPubkey,
+        ErrorCode.BAD_MESSAGE,
+        `You already have the maximum ${config.maxOpenOffersPerSeller} open offers. Close one before posting another.`,
+      );
+    }
+
+    const now = Date.now();
+    const ttlDays = m.expiresInDays ?? config.offerTtlDays;
+    const offer: OfferRow = {
+      offerId: `offer_${randomUUID().slice(0, 8)}`,
+      sellerPubkey: msg.senderPubkey,
+      sellerTag: sellerTag.toLowerCase(),
+      title: m.title,
+      deliverable: active.deliverable,
+      amount: totalAmount.toString(),
+      coinId,
+      symbol,
+      deliveryHours: active.deliveryHours,
+      milestonesJson: plan ? JSON.stringify(plan.map((p) => ({ amount: p.amount, deliverable: p.deliverable, deliveryHours: p.deliveryHours }))) : null,
+      marketIntentId: null,
+      status: 'open',
+      createdAt: now,
+      expiresAt: now + ttlDays * 86_400_000,
+      updatedAt: now,
+    };
+
+    // Best-effort mirror to the signed-intent market so other agents can discover it.
+    // A market outage must never block a local listing.
+    try {
+      const market = this.sphere.market;
+      if (market) {
+        const res = await market.postIntent({
+          intentType: 'sell',
+          category: 'notary-offer',
+          description:
+            `${m.title} — offered by @${offer.sellerTag} via @${config.nametag} escrow. ` +
+            `${active.deliverable} Price ${offer.amount} ${symbol ?? coinId.slice(0, 8)}` +
+            `${plan ? ` across ${plan.length} milestones` : ''}. Open an escrowed deal with @${config.nametag}. ` +
+            `[notary-offer]${JSON.stringify({ v: 1, offerId: offer.offerId, seller: offer.sellerTag })}`,
+          currency: symbol ?? config.preferredCoin,
+          contactHandle: `@${config.nametag}`,
+          expiresInDays: ttlDays,
+        });
+        offer.marketIntentId = res.intentId;
+      }
+    } catch (err) {
+      logger.warn({ err, offerId: offer.offerId }, 'offer market mirror failed (listing still saved locally)');
+    }
+
+    this.store.insertOffer(offer);
+    this.store.addLedger('offer_posted', { offerId: offer.offerId, seller: offer.sellerTag, amount: offer.amount, marketIntentId: offer.marketIntentId });
+    logger.info({ offerId: offer.offerId, seller: offer.sellerTag, marketIntentId: offer.marketIntentId }, 'offer posted');
+    await this.safeSendDM(
+      msg.senderPubkey,
+      encodeMessage({ v: 1, type: 'offer.posted', offerId: offer.offerId, marketIntentId: offer.marketIntentId ?? undefined }),
+    );
+  }
+
+  private async handleOfferClose(msg: DirectMessage, offerId: string): Promise<void> {
+    const offer = this.store.getOffer(offerId);
+    if (!offer) return this.replyError(msg.senderPubkey, ErrorCode.UNKNOWN_DEAL, `No offer ${offerId}.`);
+    // Only the seller who posted it may close it (authenticated by transport pubkey).
+    if (offer.sellerPubkey !== msg.senderPubkey) {
+      return this.replyError(msg.senderPubkey, ErrorCode.NOT_YOUR_DEAL, `Offer ${offerId} is not yours to close.`);
+    }
+    if (offer.status !== 'open') {
+      return this.safeSendDM(msg.senderPubkey, `Offer ${offerId} is already ${offer.status}.`);
+    }
+    await this.closeOffer(offer, 'closed');
+    await this.safeSendDM(msg.senderPubkey, `Offer ${offerId} closed. It is no longer listed.`);
+  }
+
+  /** Mark an offer closed/expired and best-effort remove its market mirror. */
+  private async closeOffer(offer: OfferRow, status: 'closed' | 'expired'): Promise<void> {
+    if (offer.marketIntentId && this.sphere.market) {
+      await this.sphere.market.closeIntent(offer.marketIntentId).catch((err) => logger.warn({ err, offerId: offer.offerId }, 'market closeIntent failed'));
+    }
+    offer.status = status;
+    offer.updatedAt = Date.now();
+    this.store.updateOffer(offer);
+    this.store.addLedger('offer_closed', { offerId: offer.offerId, status });
+  }
+
+  /** Retire offers whose TTL lapsed. Called from the timer tick. */
+  private async expireOffers(now: number): Promise<void> {
+    for (const offer of this.store.expiredOpenOffers(now)) {
+      await this.closeOffer(offer, 'expired');
+      logger.info({ offerId: offer.offerId }, 'offer expired');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Transition commit + effects
   // ---------------------------------------------------------------------------
 
@@ -538,6 +735,7 @@ export class DealService {
 
   private async tickTimers(): Promise<void> {
     const now = Date.now();
+    await this.expireOffers(now);
     for (const deal of this.store.dealsWithExpiredTimers(now)) {
       if (TERMINAL_STATES.has(deal.state)) continue;
 
@@ -674,6 +872,20 @@ export class DealService {
       deliveryHours: deal.deliveryHours,
       createdAt: deal.createdAt,
       deadlineAt: deal.deadlineAt,
+      milestones: deal.milestonesJson
+        ? (JSON.parse(deal.milestonesJson) as MilestonePlanEntry[]).map(
+            (mm): MilestoneStateEntry => ({
+              index: mm.index,
+              amount: mm.amount,
+              deliverable: mm.deliverable,
+              deliveryHours: mm.deliveryHours,
+              state: mm.state,
+              settlement: mm.settlement,
+            }),
+          )
+        : undefined,
+      currentMilestone: deal.currentMilestone ?? undefined,
+      totalAmount: deal.totalAmount,
       settlement: deal.settlementJson
         ? { ...JSON.parse(deal.settlementJson), transferIds: this.store.payoutsForDeal(deal.dealId).map((p) => p.transferId).filter((t): t is string => t !== null) }
         : undefined,

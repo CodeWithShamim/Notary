@@ -8,6 +8,7 @@ const cfg: MachineConfig = {
   fundingTimeoutMs: 24 * 3_600_000,
   confirmTimeoutMs: 48 * 3_600_000,
   disputeWindowMs: 24 * 3_600_000,
+  appealWindowMs: 24 * 3_600_000,
 };
 
 const NOW = 1_750_000_000_000;
@@ -35,11 +36,45 @@ function deal(state: DealState, extra: Partial<DealRow> = {}): DealRow {
     verdictJson: null,
     buyerProposalBps: null,
     sellerProposalBps: null,
+    milestonesJson: null,
+    currentMilestone: null,
+    totalAmount: '1000000',
     createdAt: NOW - 1000,
     deadlineAt: NOW + 1000,
     updatedAt: NOW - 1000,
     ...extra,
   };
+}
+
+/** A staged (milestone) deal in the given active-milestone state. `plan` lists the
+ *  milestone amounts; `current` is the active index. The active leg fields mirror it. */
+function milestoneDeal(
+  state: DealState,
+  amounts: string[],
+  current: number,
+  extra: Partial<DealRow> = {},
+): DealRow {
+  const plan = amounts.map((amount, index) => ({
+    index,
+    amount,
+    deliverable: `stage ${index + 1}`,
+    deliveryHours: 72,
+    state: (index < current ? 'released' : index === current ? 'active' : 'pending') as
+      | 'pending'
+      | 'active'
+      | 'released'
+      | 'refunded'
+      | 'resolved',
+  }));
+  const total = amounts.reduce((s, a) => s + BigInt(a), 0n).toString();
+  return deal(state, {
+    amount: amounts[current],
+    deliverable: `stage ${current + 1}`,
+    milestonesJson: JSON.stringify(plan),
+    currentMilestone: current,
+    totalAmount: total,
+    ...extra,
+  });
 }
 
 function assertOk(r: ReturnType<typeof transition>) {
@@ -136,11 +171,99 @@ describe('transition — refund / cancel paths', () => {
     expect(toBuyer + toSeller + 5_000n).toBe(1_000_000n); // no dust lost
   });
 
-  it('DELIVERED_CLAIMED + CONFIRM_TIMEOUT → RELEASED (silence = acceptance)', () => {
+  it('DELIVERED_CLAIMED + CONFIRM_TIMEOUT → RELEASE_PENDING (appeal window, NO payout yet)', () => {
     const r = assertOk(transition(deal(DealState.DELIVERED_CLAIMED), DealEvent.CONFIRM_TIMEOUT, {}, NOW, cfg));
+    expect(r.deal.state).toBe(DealState.RELEASE_PENDING);
+    expect(r.deal.deadlineAt).toBe(NOW + cfg.appealWindowMs);
+    expect(r.effects.every((e) => e.type !== 'payout')).toBe(true);
+    expect(r.deal.settlementJson).toBeNull();
+    // The buyer gets a final warning so a sleeping buyer can still reject.
+    expect(r.effects).toEqual([expect.objectContaining({ type: 'notify', audience: 'buyer' })]);
+  });
+});
+
+describe('transition — appeal window (feature 5)', () => {
+  it('RELEASE_PENDING + APPEAL_TIMEOUT → RELEASED, pays seller minus fee', () => {
+    const r = assertOk(transition(deal(DealState.RELEASE_PENDING), DealEvent.APPEAL_TIMEOUT, {}, NOW, cfg));
     expect(r.deal.state).toBe(DealState.RELEASED);
+    expect(r.deal.deadlineAt).toBeNull();
     const payout = r.effects.find((e) => e.type === 'payout');
     expect(payout).toMatchObject({ kind: 'release', recipient: 'seller', amount: 990_000n });
+  });
+
+  it('RELEASE_PENDING + CONFIRM → RELEASED (buyer woke up and confirmed)', () => {
+    const r = assertOk(transition(deal(DealState.RELEASE_PENDING), DealEvent.CONFIRM, {}, NOW, cfg));
+    expect(r.deal.state).toBe(DealState.RELEASED);
+    expect(r.effects.find((e) => e.type === 'payout')).toMatchObject({ kind: 'release', recipient: 'seller' });
+  });
+
+  it('RELEASE_PENDING + DISPUTE → DISPUTED (buyer rejects during the grace window)', () => {
+    const r = assertOk(transition(deal(DealState.RELEASE_PENDING), DealEvent.DISPUTE, { reason: 'it was junk' }, NOW, cfg));
+    expect(r.deal.state).toBe(DealState.DISPUTED);
+    expect(r.deal.buyerEvidence).toBe('it was junk');
+    expect(r.deal.deadlineAt).toBe(NOW + cfg.disputeWindowMs);
+    expect(r.effects.every((e) => e.type !== 'payout')).toBe(true);
+  });
+});
+
+describe('transition — staged (milestone) escrow (feature 3)', () => {
+  it('releasing a non-final milestone advances to AWAITING_FUNDS, pays that milestone, requests the next', () => {
+    // 3 stages of 300k / 400k / 300k; milestone 0 is DELIVERED_CLAIMED and gets confirmed.
+    const d = milestoneDeal(DealState.DELIVERED_CLAIMED, ['300000', '400000', '300000'], 0);
+    const r = assertOk(transition(d, DealEvent.CONFIRM, {}, NOW, cfg));
+    expect(r.deal.state).toBe(DealState.AWAITING_FUNDS); // NOT terminal — next milestone opens
+    expect(r.deal.currentMilestone).toBe(1);
+    expect(r.deal.amount).toBe('400000'); // active leg is now milestone 1
+    expect(r.deal.deadlineAt).toBe(NOW + cfg.fundingTimeoutMs);
+    // milestone 0 released 300000 * 0.99 = 297000 to seller; a new funding request is queued
+    expect(r.effects.find((e) => e.type === 'payout')).toMatchObject({ kind: 'release', recipient: 'seller', amount: 297_000n });
+    expect(r.effects.some((e) => e.type === 'send_payment_request')).toBe(true);
+    const plan = JSON.parse(r.deal.milestonesJson!) as { state: string }[];
+    expect(plan.map((p) => p.state)).toEqual(['released', 'active', 'pending']);
+    expect(r.deal.settlementJson).toBeNull(); // deal-level settlement only set at final release
+  });
+
+  it('releasing the FINAL milestone terminates the deal as RELEASED', () => {
+    const d = milestoneDeal(DealState.DELIVERED_CLAIMED, ['300000', '400000', '300000'], 2);
+    const r = assertOk(transition(d, DealEvent.CONFIRM, {}, NOW, cfg));
+    expect(r.deal.state).toBe(DealState.RELEASED);
+    expect(r.deal.deadlineAt).toBeNull();
+    expect(r.effects.some((e) => e.type === 'send_payment_request')).toBe(false);
+    expect(r.effects.find((e) => e.type === 'payout')).toMatchObject({ kind: 'release', amount: 297_000n });
+    expect(JSON.parse(r.deal.settlementJson!)).toEqual({ toSeller: '297000', fee: '3000' });
+    const plan = JSON.parse(r.deal.milestonesJson!) as { state: string }[];
+    expect(plan.map((p) => p.state)).toEqual(['released', 'released', 'released']);
+  });
+
+  it('the sum of every milestone release + fee equals the escrowed total, no dust', () => {
+    const amounts = ['300000', '400000', '300001']; // total 1000001
+    let toSeller = 0n;
+    let fees = 0n;
+    for (let i = 0; i < amounts.length; i++) {
+      const d = milestoneDeal(DealState.DELIVERED_CLAIMED, amounts, i);
+      const r = assertOk(transition(d, DealEvent.CONFIRM, {}, NOW, cfg));
+      const payout = r.effects.find((e) => e.type === 'payout') as { amount: bigint };
+      toSeller += payout.amount;
+      fees += BigInt(amounts[i]!) - payout.amount;
+    }
+    expect(toSeller + fees).toBe(1_000_001n);
+  });
+
+  it('a milestone DELIVERY_TIMEOUT refunds only the active leg and terminates the deal', () => {
+    const d = milestoneDeal(DealState.FUNDED, ['300000', '400000', '300000'], 1);
+    const r = assertOk(transition(d, DealEvent.DELIVERY_TIMEOUT, {}, NOW, cfg));
+    expect(r.deal.state).toBe(DealState.REFUNDED); // whole deal ends; later milestones never funded
+    expect(r.effects.find((e) => e.type === 'payout')).toMatchObject({ kind: 'refund', recipient: 'buyer', amount: 400_000n });
+    const plan = JSON.parse(r.deal.milestonesJson!) as { state: string }[];
+    expect(plan[1]!.state).toBe('refunded');
+  });
+
+  it('a milestone CONFIRM_TIMEOUT opens the appeal window on the active leg (no advance)', () => {
+    const d = milestoneDeal(DealState.DELIVERED_CLAIMED, ['300000', '400000'], 0);
+    const r = assertOk(transition(d, DealEvent.CONFIRM_TIMEOUT, {}, NOW, cfg));
+    expect(r.deal.state).toBe(DealState.RELEASE_PENDING);
+    expect(r.deal.currentMilestone).toBe(0); // unchanged — advance only happens on release
+    expect(r.effects.every((e) => e.type !== 'payout')).toBe(true);
   });
 });
 
@@ -156,6 +279,9 @@ describe('transition — illegal transitions are rejected, never throw', () => {
     [DealState.DELIVERED_CLAIMED, DealEvent.CONFIRM],
     [DealState.DELIVERED_CLAIMED, DealEvent.DISPUTE],
     [DealState.DELIVERED_CLAIMED, DealEvent.CONFIRM_TIMEOUT],
+    [DealState.RELEASE_PENDING, DealEvent.CONFIRM],
+    [DealState.RELEASE_PENDING, DealEvent.DISPUTE],
+    [DealState.RELEASE_PENDING, DealEvent.APPEAL_TIMEOUT],
     [DealState.DISPUTED, DealEvent.RESOLVE],
   ];
 
@@ -192,6 +318,7 @@ describe('timeout mapping', () => {
     expect(TIMEOUT_EVENT_FOR_STATE[DealState.AWAITING_FUNDS]).toBe(DealEvent.FUNDING_TIMEOUT);
     expect(TIMEOUT_EVENT_FOR_STATE[DealState.FUNDED]).toBe(DealEvent.DELIVERY_TIMEOUT);
     expect(TIMEOUT_EVENT_FOR_STATE[DealState.DELIVERED_CLAIMED]).toBe(DealEvent.CONFIRM_TIMEOUT);
+    expect(TIMEOUT_EVENT_FOR_STATE[DealState.RELEASE_PENDING]).toBe(DealEvent.APPEAL_TIMEOUT);
     expect(TIMEOUT_EVENT_FOR_STATE[DealState.RELEASED]).toBeUndefined();
   });
 });

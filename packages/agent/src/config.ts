@@ -48,12 +48,18 @@ export const config = {
   maxEscrow: big('MAX_ESCROW', 10n ** 24n), // up to ~1,000,000 UCT
   /** Coins the notary escrows. Empty = any coin resolvable in the registry. */
   allowedCoins: (process.env.ALLOWED_COINS ?? '').split(',').filter(Boolean),
+  /** Max milestones per staged deal. Bounds token/DB cost and keeps invites readable. */
+  maxMilestones: int('MAX_MILESTONES', 12),
 
   // timers -------------------------------------------------------------------
   acceptTimeoutMs: int('ACCEPT_TIMEOUT_MS', 1 * HOUR),
   fundingTimeoutMs: int('FUNDING_TIMEOUT_MS', 24 * HOUR),
   defaultDeliveryHours: int('DEFAULT_DELIVERY_HOURS', 72),
   confirmTimeoutMs: int('CONFIRM_TIMEOUT_MS', 48 * HOUR),
+  /** Grace/appeal window after the confirm window lapses: a final warning is sent
+   *  and the buyer can still dispute or confirm before the silent release finalizes.
+   *  Protects a buyer who was simply asleep from auto-paying for junk delivery. */
+  appealWindowMs: int('APPEAL_WINDOW_MS', 24 * HOUR),
   /** How long both parties get to submit evidence before the arbiter rules. */
   disputeWindowMs: int('DISPUTE_WINDOW_MS', 24 * HOUR),
   timerPollMs: int('TIMER_POLL_MS', 15_000),
@@ -83,6 +89,12 @@ export const config = {
   // market intent ---------------------------------------------------------------
   intentRefreshMs: int('INTENT_REFRESH_MS', 6 * HOUR),
   docsUrl: process.env.DOCS_URL ?? 'https://github.com/codewithshamim/notary',
+
+  // marketplace offers ------------------------------------------------------------
+  /** Default lifetime of a seller's offer listing (days) when they don't specify. */
+  offerTtlDays: int('OFFER_TTL_DAYS', 14),
+  /** Cap on simultaneously-open offers per seller — limits listing spam. */
+  maxOpenOffersPerSeller: int('MAX_OPEN_OFFERS_PER_SELLER', 25),
 
   // pools -------------------------------------------------------------------------
   poolDeadlineMs: int('POOL_DEADLINE_MS', 24 * HOUR),

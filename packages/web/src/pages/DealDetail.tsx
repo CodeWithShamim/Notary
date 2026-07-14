@@ -61,7 +61,7 @@ export function DealDetail() {
   const stepIndex =
     state === 'RELEASED' ? path.length - 1 :
     state === 'REFUNDED' || state === 'CANCELLED' || state === 'EXPIRED' || state === 'RESOLVED' ? -1 :
-    state === 'DISPUTED' ? path.indexOf('DELIVERED_CLAIMED') : // stays on the delivery step while arbitrated
+    state === 'DISPUTED' || state === 'RELEASE_PENDING' ? path.indexOf('DELIVERED_CLAIMED') : // stays on the delivery step
     path.indexOf(state);
 
   const events = (snap?.events ?? trail?.events ?? []) as { at: number; event: string; detail?: string }[];
@@ -193,10 +193,44 @@ export function DealDetail() {
         </div>
       )}
 
-      {/* buyer: confirm / dispute */}
-      {state === 'DELIVERED_CLAIMED' && isBuyer && (
+      {/* milestone progress — staged deals */}
+      {snap?.milestones && snap.milestones.length > 1 && (
         <div className="card">
-          <h2>The seller says it's delivered{snap?.events?.some((e) => e.event === 'DELIVERED') ? '' : ''}</h2>
+          <h2>Milestones</h2>
+          <p className="muted">
+            {(snap.currentMilestone ?? 0) + 1} of {snap.milestones.length} · staged escrow of {human(snap.totalAmount ?? snap.amount)}{' '}
+            {snap.symbol ?? ''} total. Each is funded and released in turn; only the active one is ever at risk.
+          </p>
+          <ul className="milestone-list">
+            {snap.milestones.map((mm) => {
+              const active = mm.index === (snap.currentMilestone ?? -1) && !['RELEASED', 'REFUNDED', 'RESOLVED'].includes(state);
+              return (
+                <li key={mm.index} className={`milestone-item ${mm.state}${active ? ' active' : ''}`}>
+                  <span className={`badge ${mm.state === 'released' ? 'RELEASED' : mm.state === 'refunded' || mm.state === 'resolved' ? 'REFUNDED' : active ? 'FUNDED' : ''}`}>
+                    {active ? 'active' : mm.state}
+                  </span>
+                  <span className="milestone-amt gold">{human(mm.amount)} {snap.symbol ?? ''}</span>
+                  <span className="muted milestone-desc">{mm.deliverable}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
+      {/* buyer: confirm / dispute (also during the RELEASE_PENDING appeal window) */}
+      {(state === 'DELIVERED_CLAIMED' || state === 'RELEASE_PENDING') && isBuyer && (
+        <div className="card">
+          {state === 'RELEASE_PENDING' && (
+            <div className="terminal-card refunded" style={{ marginBottom: '0.9rem' }}>
+              <b>⏳ About to auto-release</b>
+              <div className="muted mt-sm">
+                Your confirm window lapsed, so the escrow is scheduled to release to the seller{deadline ? ` ${timeLeft(deadline)}` : ' soon'}.
+                This is your last chance to reject the delivery — dispute now if it wasn't as agreed.
+              </div>
+            </div>
+          )}
+          <h2>The seller says it's delivered</h2>
           <p className="muted">
             Confirm to release {human(snap?.amount ?? '0')} {snap?.symbol ?? ''} (minus fee) to @{snap?.sellerTag}. Silence past
             the deadline counts as acceptance. Disputing opens an evidence-based arbitration: both sides submit

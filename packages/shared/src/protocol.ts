@@ -12,6 +12,10 @@ import { z } from 'zod';
 
 export const PROTOCOL_VERSION = 1 as const;
 
+/** Hard cap on milestones per deal — bounds token/DB cost and keeps the invite readable.
+ *  The agent may enforce a lower cap via config (MAX_MILESTONES). */
+export const MILESTONE_HARD_CAP = 20 as const;
+
 // ---------------------------------------------------------------------------
 // Deal states & events
 // ---------------------------------------------------------------------------
@@ -21,6 +25,7 @@ export const DealState = {
   AWAITING_FUNDS: 'AWAITING_FUNDS',
   FUNDED: 'FUNDED',
   DELIVERED_CLAIMED: 'DELIVERED_CLAIMED',
+  RELEASE_PENDING: 'RELEASE_PENDING', // confirm window lapsed; short appeal window before the silent release finalizes
   DISPUTED: 'DISPUTED', //   buyer disputed; evidence window open before arbitration
   RELEASED: 'RELEASED',
   REFUNDED: 'REFUNDED',
@@ -51,7 +56,8 @@ export const DealEvent = {
   DELIVERY_TIMEOUT: 'DELIVERY_TIMEOUT',
   CONFIRM: 'CONFIRM', //             buyer confirms delivery
   DISPUTE: 'DISPUTE', //             buyer disputes delivery → opens arbitration
-  CONFIRM_TIMEOUT: 'CONFIRM_TIMEOUT', // buyer silence = acceptance
+  CONFIRM_TIMEOUT: 'CONFIRM_TIMEOUT', // buyer silence → opens a short appeal window (no longer an instant release)
+  APPEAL_TIMEOUT: 'APPEAL_TIMEOUT', // appeal window lapsed with no dispute = silent release finalizes
   RESOLVE: 'RESOLVE', //             arbiter's verdict settles a dispute (agent-internal)
 } as const;
 export type DealEvent = (typeof DealEvent)[keyof typeof DealEvent];
@@ -79,7 +85,12 @@ export const LEGAL_TRANSITIONS: Readonly<
   [DealState.DELIVERED_CLAIMED]: {
     [DealEvent.CONFIRM]: DealState.RELEASED,
     [DealEvent.DISPUTE]: DealState.DISPUTED, // v2: opens an evidence-based arbitration
-    [DealEvent.CONFIRM_TIMEOUT]: DealState.RELEASED, // silence = acceptance
+    [DealEvent.CONFIRM_TIMEOUT]: DealState.RELEASE_PENDING, // silence opens a short appeal window, not an instant release
+  },
+  [DealState.RELEASE_PENDING]: {
+    [DealEvent.CONFIRM]: DealState.RELEASED, //   buyer woke up and confirmed → release now
+    [DealEvent.DISPUTE]: DealState.DISPUTED, //   buyer woke up and rejects the delivery → arbitration
+    [DealEvent.APPEAL_TIMEOUT]: DealState.RELEASED, // appeal window lapsed too → the silence rule finalizes
   },
   [DealState.DISPUTED]: {
     [DealEvent.RESOLVE]: DealState.RESOLVED, // arbiter's split verdict is final
@@ -176,19 +187,67 @@ export const zAmount = z.string().regex(/^\d+$/, 'integer base units required');
 export const zPartyRef = z.string().min(1).max(256);
 
 const zDealId = z.string().min(4).max(64);
+const zOfferId = z.string().min(4).max(64);
+
+/** Fractional hours allowed (0.05 = 3 min) — used by fast demo/timeout runs. */
+const zDeliveryHours = z.number().positive().max(24 * 30);
+
+/** One stage of a milestone deal. Each is funded / delivered / released in order. */
+export const MilestoneSchema = z.object({
+  amount: zAmount,
+  deliverable: z.string().min(1).max(2000),
+  deliveryHours: zDeliveryHours.optional(),
+});
+export type Milestone = z.infer<typeof MilestoneSchema>;
+
+/** A milestone as it appears in a live snapshot — carries its running state. */
+export const MilestoneStateSchema = z.object({
+  index: z.number().int().nonnegative(),
+  amount: zAmount,
+  deliverable: z.string(),
+  deliveryHours: z.number().positive(),
+  state: z.enum(['pending', 'active', 'released', 'refunded', 'resolved']),
+  settlement: z
+    .object({ toSeller: zAmount.optional(), toBuyer: zAmount.optional(), fee: zAmount.optional() })
+    .optional(),
+});
+export type MilestoneStateEntry = z.infer<typeof MilestoneStateSchema>;
 
 // -- customer → notary ------------------------------------------------------
 
+// The either/or rule (single amount+deliverable vs milestones[]) is enforced by
+// the agent handler with a clear BAD_MESSAGE — a discriminatedUnion member must
+// stay a plain object, and semantic validation already lives in the handlers.
 export const DealOpenSchema = z.object({
   ...base,
   type: z.literal('deal.open'),
   seller: zPartyRef,
-  amount: zAmount,
   coinId: z.string().min(1),
-  deliverable: z.string().min(1).max(2000),
-  // Fractional hours allowed (0.05 = 3 min) — used by fast demo/timeout runs.
-  deliveryHours: z.number().positive().max(24 * 30).optional(),
+  // Single-shot escrow: amount + deliverable. Omitted when `milestones` is used.
+  amount: zAmount.optional(),
+  deliverable: z.string().min(1).max(2000).optional(),
+  deliveryHours: zDeliveryHours.optional(),
+  // Staged escrow: an ordered list funded/delivered/released one at a time.
+  // Mutually exclusive with the single amount+deliverable form.
+  milestones: z.array(MilestoneSchema).min(2).max(MILESTONE_HARD_CAP).optional(),
+  // Set when the deal was opened from a marketplace offer (provenance only).
+  fromOffer: zOfferId.optional(),
 });
+
+/** Returns null if `m` satisfies the exactly-one-of {single, milestones} rule,
+ *  else a human-readable reason. Shared so web and agent report it identically. */
+export function validateDealShape(m: {
+  amount?: string;
+  deliverable?: string;
+  milestones?: unknown[];
+}): string | null {
+  const hasSingle = m.amount !== undefined && m.deliverable !== undefined;
+  const hasMilestones = m.milestones !== undefined && m.milestones.length > 0;
+  if (hasSingle === hasMilestones) {
+    return 'Provide either (amount + deliverable) for a single deal OR milestones[] for a staged deal — not both or neither.';
+  }
+  return null;
+}
 
 export const DealAcceptSchema = z.object({
   ...base,
@@ -244,6 +303,55 @@ export const DealStatusSchema = z.object({
   dealId: zDealId,
 });
 
+// -- marketplace: seller offers ---------------------------------------------
+
+/** Seller posts a public offer ("I'll do X for Y"). The agent curates it, mirrors
+ *  it to the signed-intent market, and lists it so buyers can open a deal from it. */
+export const OfferPostSchema = z.object({
+  ...base,
+  type: z.literal('offer.post'),
+  title: z.string().min(3).max(120),
+  coinId: z.string().min(1),
+  // Single-price offer OR a staged (milestone) offer — same either/or rule as deal.open,
+  // enforced by the agent handler via validateDealShape().
+  amount: zAmount.optional(),
+  deliverable: z.string().min(1).max(2000).optional(),
+  deliveryHours: zDeliveryHours.optional(),
+  milestones: z.array(MilestoneSchema).min(2).max(MILESTONE_HARD_CAP).optional(),
+  expiresInDays: z.number().int().positive().max(90).optional(),
+});
+
+export const OfferCloseSchema = z.object({
+  ...base,
+  type: z.literal('offer.close'),
+  offerId: zOfferId,
+});
+
+/** notary → seller: confirmation that an offer is live. */
+export const OfferPostedSchema = z.object({
+  ...base,
+  type: z.literal('offer.posted'),
+  offerId: zOfferId,
+  marketIntentId: z.string().optional(), // present if the market mirror succeeded
+});
+
+/** Public offer as served by the read-only API / rendered by the web marketplace. */
+export const OfferSchema = z.object({
+  offerId: zOfferId,
+  sellerTag: z.string(),
+  title: z.string(),
+  deliverable: z.string(),
+  amount: zAmount, //          total price (sum across milestones for a staged offer)
+  coinId: z.string(),
+  symbol: z.string().optional(),
+  deliveryHours: z.number().positive(),
+  milestones: z.array(MilestoneSchema).optional(),
+  status: z.enum(['open', 'closed', 'expired']),
+  createdAt: z.number().int(),
+  expiresAt: z.number().int(),
+});
+export type Offer = z.infer<typeof OfferSchema>;
+
 // -- notary → customers -----------------------------------------------------
 
 export const DealInviteSchema = z.object({
@@ -259,6 +367,10 @@ export const DealInviteSchema = z.object({
   deliveryHours: z.number().positive(),
   feeBps: z.number().int().min(0).max(10_000),
   acceptBy: z.number().int().positive(), // unix ms deadline
+  // For staged deals: the full milestone plan the seller is accepting. `amount`
+  // above is the FIRST milestone; `totalAmount` is the sum across all stages.
+  milestones: z.array(MilestoneSchema).optional(),
+  totalAmount: zAmount.optional(),
 });
 
 export const DealFundedSchema = z.object({
@@ -286,14 +398,18 @@ export const DealSnapshotSchema = z.object({
   seller: z.string(),
   buyerTag: z.string().optional(),
   sellerTag: z.string().optional(),
-  amount: zAmount,
+  amount: zAmount, //   for a staged deal this is the ACTIVE milestone's amount
   coinId: z.string(),
   symbol: z.string().optional(),
   feeBps: z.number().int(),
-  deliverable: z.string(),
+  deliverable: z.string(), // active milestone's deliverable for a staged deal
   deliveryHours: z.number().positive(),
   createdAt: z.number().int(),
   deadlineAt: z.number().int().nullable(), // active timer for current state
+  // Staged escrow: the full plan + which milestone is active. Absent for single deals.
+  milestones: z.array(MilestoneStateSchema).optional(),
+  currentMilestone: z.number().int().nonnegative().optional(),
+  totalAmount: zAmount.optional(), // sum across milestones (= amount for single deals)
   settlement: z
     .object({
       toSeller: zAmount.optional(),
@@ -361,6 +477,9 @@ export const NotaryMessageSchema = z.discriminatedUnion('type', [
   DealEvidenceSchema,
   DealStatusSchema,
   DealUpdateSchema,
+  OfferPostSchema,
+  OfferCloseSchema,
+  OfferPostedSchema,
   ProtocolErrorSchema,
 ]);
 export type NotaryMessage = z.infer<typeof NotaryMessageSchema>;
@@ -376,6 +495,9 @@ export type DealDispute = z.infer<typeof DealDisputeSchema>;
 export type DealEvidence = z.infer<typeof DealEvidenceSchema>;
 export type DealStatus = z.infer<typeof DealStatusSchema>;
 export type DealUpdate = z.infer<typeof DealUpdateSchema>;
+export type OfferPost = z.infer<typeof OfferPostSchema>;
+export type OfferClose = z.infer<typeof OfferCloseSchema>;
+export type OfferPosted = z.infer<typeof OfferPostedSchema>;
 export type ProtocolError = z.infer<typeof ProtocolErrorSchema>;
 
 export function encodeMessage(msg: NotaryMessage): string {
@@ -413,6 +535,7 @@ export const HELP_TEXT = `I'm @notary — an autonomous escrow agent. I hold fun
 
 Commands (send as JSON DM):
   {"v":1,"type":"deal.open","seller":"@bob","amount":"<base units>","coinId":"...","deliverable":"...","deliveryHours":72}
+  {"v":1,"type":"deal.open","seller":"@bob","coinId":"...","milestones":[{"amount":"...","deliverable":"...","deliveryHours":72},...]} (staged escrow)
   {"v":1,"type":"deal.accept","dealId":"..."}     (seller)
   {"v":1,"type":"deal.reject","dealId":"..."}     (seller)
   {"v":1,"type":"deal.delivered","dealId":"...","proof":"..."} (seller)
@@ -420,5 +543,7 @@ Commands (send as JSON DM):
   {"v":1,"type":"deal.dispute","dealId":"...","reason":"..."} (buyer)
   {"v":1,"type":"deal.evidence","dealId":"...","statement":"...","proof":"...","proposeBuyerBps":5000} (either party, while DISPUTED; proposeBuyerBps optional)
   {"v":1,"type":"deal.status","dealId":"..."}
+  {"v":1,"type":"offer.post","title":"...","amount":"<base units>","coinId":"...","deliverable":"...","deliveryHours":72} (seller lists a public offer)
+  {"v":1,"type":"offer.close","offerId":"..."}    (seller)
 
-Flow: open → seller accepts → I send the buyer a payment request → funded → seller delivers → buyer confirms (or 48h silence) → I pay the seller minus fee. A dispute opens an evidence window: both parties send deal.evidence, optionally including proposeBuyerBps — a sealed proposed split. If both proposed splits roughly agree, the deal auto-settles at the midpoint with no arbiter; otherwise an AI arbiter reads the deliverable + evidence and rules a split (buyer/seller) minus the arbitration fee. Timeouts auto-refund.`;
+Flow: open → seller accepts → I send the buyer a payment request → funded → seller delivers → buyer confirms (or the confirm window lapses → a short appeal window opens with a final warning → then release) → I pay the seller minus fee. A staged (milestone) deal runs this loop once per milestone, funding and releasing each in order. A dispute opens an evidence window: both parties send deal.evidence, optionally including proposeBuyerBps — a sealed proposed split. If both proposed splits roughly agree, the deal auto-settles at the midpoint with no arbiter; otherwise an AI arbiter reads the deliverable + evidence and rules a split (buyer/seller) minus the arbitration fee. Timeouts auto-refund. Sellers can also post a public offer with offer.post so buyers discover and open deals from it.`;

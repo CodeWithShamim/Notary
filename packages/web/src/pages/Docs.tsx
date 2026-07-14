@@ -18,8 +18,8 @@ const TOC: { id: string; label: string }[] = [
 
 /** DM protocol message catalogue — mirrors packages/shared/src/protocol.ts. */
 const MESSAGES: { name: string; dir: string; fields: string }[] = [
-  { name: 'deal.open', dir: 'buyer → notary', fields: 'seller, amount, coinId, deliverable, deliveryHours?' },
-  { name: 'deal.invite', dir: 'notary → seller', fields: 'dealId, buyer, seller, amount, coinId, deliverable, deliveryHours, feeBps, acceptBy' },
+  { name: 'deal.open', dir: 'buyer → notary', fields: 'seller, coinId, deliveryHours?; then EITHER amount + deliverable (single) OR milestones[] (staged)' },
+  { name: 'deal.invite', dir: 'notary → seller', fields: 'dealId, buyer, seller, amount, coinId, deliverable, deliveryHours, feeBps, acceptBy, milestones?, totalAmount?' },
   { name: 'deal.accept', dir: 'seller → notary', fields: 'dealId' },
   { name: 'deal.reject', dir: 'seller → notary', fields: 'dealId, reason?' },
   { name: 'deal.delivered', dir: 'seller → notary', fields: 'dealId, proof?' },
@@ -27,6 +27,9 @@ const MESSAGES: { name: string; dir: string; fields: string }[] = [
   { name: 'deal.dispute', dir: 'buyer → notary', fields: 'dealId, reason?' },
   { name: 'deal.status', dir: 'party → notary', fields: 'dealId' },
   { name: 'deal.update', dir: 'notary → parties', fields: 'deal (full snapshot — the web app’s live channel)' },
+  { name: 'offer.post', dir: 'seller → notary', fields: 'title, coinId, deliveryHours?; amount + deliverable OR milestones[]; expiresInDays?' },
+  { name: 'offer.close', dir: 'seller → notary', fields: 'offerId' },
+  { name: 'offer.posted', dir: 'notary → seller', fields: 'offerId, marketIntentId?' },
   { name: 'error', dir: 'notary → sender', fields: 'code, message, dealId?' },
 ];
 
@@ -50,6 +53,9 @@ const CONFIG: { name: string; def: string; meaning: string }[] = [
   { name: 'FEE_BPS / DISPUTE_FEE_BPS', def: '100 / 50', meaning: 'Escrow fee / retained dispute fee, in basis points.' },
   { name: 'MIN_ESCROW / MAX_ESCROW', def: '1 / 1e15', meaning: 'Escrow bounds, in base units.' },
   { name: 'ACCEPT / FUNDING / CONFIRM_TIMEOUT_MS', def: '1h / 24h / 48h', meaning: 'Deal timers.' },
+  { name: 'APPEAL_WINDOW_MS', def: '24h', meaning: 'Grace window after the confirm window lapses — the buyer can still dispute before the silent release finalizes.' },
+  { name: 'MAX_MILESTONES', def: '12', meaning: 'Cap on milestones per staged deal.' },
+  { name: 'OFFER_TTL_DAYS / MAX_OPEN_OFFERS_PER_SELLER', def: '14 / 25', meaning: 'Marketplace offer lifetime and per-seller listing cap.' },
   { name: 'DEFAULT_DELIVERY_HOURS', def: '72', meaning: 'Delivery window when the buyer omits one.' },
   { name: 'TREASURY_FLOOR / TREASURY_MINT_AMOUNT', def: '1000 / 100000', meaning: 'Self-mint trigger + amount.' },
   { name: 'TREASURY_THRESHOLD / PREFERRED_COIN', def: '10000 / UCT', meaning: 'Rebalance a non-preferred coin above the threshold.' },
@@ -221,9 +227,10 @@ CANCELLED            EXPIRED                        REFUNDED (full refund)`}</pr
               <tr><td className="mono">PROPOSED</td><td>Buyer opened the deal; the notary invited the seller and is waiting for accept/reject.</td></tr>
               <tr><td className="mono">AWAITING_FUNDS</td><td>Seller accepted; the notary sent the buyer a payment request and is watching for funds.</td></tr>
               <tr><td className="mono">FUNDED</td><td>Escrow is confirmed on-chain. The seller can begin work.</td></tr>
-              <tr><td className="mono">DELIVERED_CLAIMED</td><td>Seller marked the work delivered. Buyer can confirm or dispute; silence releases at the deadline.</td></tr>
-              <tr><td className="mono">RELEASED</td><td>Terminal. Seller received <code>amount − fee</code>; the notary retained the fee.</td></tr>
-              <tr><td className="mono">REFUNDED</td><td>Terminal. Buyer refunded (full on timeout, or <code>amount − dispute fee</code> on dispute).</td></tr>
+              <tr><td className="mono">DELIVERED_CLAIMED</td><td>Seller marked the work delivered. Buyer can confirm or dispute within the confirm window.</td></tr>
+              <tr><td className="mono">RELEASE_PENDING</td><td>The confirm window lapsed. A short appeal window opens with a final warning to the buyer — they can still dispute or confirm before the silent release finalizes.</td></tr>
+              <tr><td className="mono">RELEASED</td><td>Terminal. Seller received <code>amount − fee</code>; the notary retained the fee. For a staged deal, this is the last milestone; earlier milestones released as they completed.</td></tr>
+              <tr><td className="mono">REFUNDED</td><td>Terminal. Buyer refunded (full on timeout, or <code>amount − dispute fee</code> on dispute). For a staged deal, only the active milestone is escrowed and refunded.</td></tr>
               <tr><td className="mono">CANCELLED</td><td>Terminal. Seller rejected, or the accept window elapsed.</td></tr>
               <tr><td className="mono">EXPIRED</td><td>Terminal. The funding window elapsed before escrow landed.</td></tr>
             </tbody>

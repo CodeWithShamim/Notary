@@ -5,7 +5,7 @@ import { DealState, DealEvent, HELP_TEXT, LEGAL_TRANSITIONS, PROTOCOL_VERSION } 
 import { config } from './config.js';
 import { logger } from './logger.js';
 import { computeLeaderboard, computeReputation } from './reputation.js';
-import type { Store } from './db.js';
+import type { OfferRow, Store } from './db.js';
 import type { Treasury } from './treasury.js';
 
 const STARTED_AT = Date.now();
@@ -14,6 +14,25 @@ const STARTED_AT = Date.now();
 function redact(detail: string | null): string | undefined {
   if (!detail) return undefined;
   return detail.replace(/@[a-z0-9_+-]+/gi, '@…').replace(/\b[0-9a-f]{16,}\b/gi, '…');
+}
+
+/** Public shape of an offer for the marketplace API. `sellerTag` is intentionally
+ *  exposed here (unlike the private deal trail) — an offer is a public listing. */
+function offerToJson(o: OfferRow) {
+  return {
+    offerId: o.offerId,
+    sellerTag: o.sellerTag,
+    title: o.title,
+    deliverable: o.deliverable,
+    amount: o.amount,
+    coinId: o.coinId,
+    symbol: o.symbol ?? undefined,
+    deliveryHours: o.deliveryHours,
+    milestones: o.milestonesJson ? (JSON.parse(o.milestonesJson) as unknown[]) : undefined,
+    status: o.status,
+    createdAt: o.createdAt,
+    expiresAt: o.expiresAt,
+  };
 }
 
 /**
@@ -88,6 +107,18 @@ export async function startApi(sphere: Sphere, store: Store, treasury: Treasury)
     };
   });
 
+  // Marketplace: open seller offers. Public by design — a listing exists to be
+  // discovered. Buyers open a deal from one; the deal still runs full validation.
+  app.get('/api/offers', async () => ({
+    offers: store.listOpenOffers().map((o) => offerToJson(o)),
+  }));
+
+  app.get<{ Params: { id: string } }>('/api/offers/:id', async (req, reply) => {
+    const offer = store.getOffer(req.params.id);
+    if (!offer) return reply.code(404).send({ error: 'unknown offer' });
+    return offerToJson(offer);
+  });
+
   app.get('/api/pools', async () => ({
     pools: store.listPools().map((p) => {
       const members = store.getPoolMembers(p.poolId);
@@ -132,7 +163,7 @@ export async function startApi(sphere: Sphere, store: Store, treasury: Treasury)
       disputeWindow: config.disputeWindowMs,
     },
     messages: {
-      'deal.open': { direction: 'buyer → notary', fields: { seller: '@nametag', amount: 'base-unit string', coinId: 'hex coinId or registry symbol', deliverable: 'string', deliveryHours: 'int, optional' } },
+      'deal.open': { direction: 'buyer → notary', fields: { seller: '@nametag', amount: 'base-unit string (single deal)', coinId: 'hex coinId or registry symbol', deliverable: 'string (single deal)', deliveryHours: 'int, optional', milestones: 'array of {amount, deliverable, deliveryHours?} for staged escrow — mutually exclusive with amount+deliverable' } },
       'deal.invite': { direction: 'notary → seller', fields: { dealId: '', buyer: '', seller: '', amount: '', coinId: '', deliverable: '', deliveryHours: '', feeBps: '', acceptBy: 'unix ms' } },
       'deal.accept': { direction: 'seller → notary', fields: { dealId: '' } },
       'deal.reject': { direction: 'seller → notary', fields: { dealId: '', reason: 'optional' } },
@@ -143,6 +174,9 @@ export async function startApi(sphere: Sphere, store: Store, treasury: Treasury)
       'deal.evidence': { direction: 'party → notary', fields: { dealId: '', statement: 'string', proof: 'optional URL/hash' } },
       'deal.status': { direction: 'party → notary', fields: { dealId: '' } },
       'deal.update': { direction: 'notary → parties', fields: { deal: 'full DealSnapshot (see @notary/shared)' } },
+      'offer.post': { direction: 'seller → notary', fields: { title: '', amount: 'base-unit string OR milestones[]', coinId: '', deliverable: '', deliveryHours: 'optional', expiresInDays: 'optional' } },
+      'offer.close': { direction: 'seller → notary', fields: { offerId: '' } },
+      'offer.posted': { direction: 'notary → seller', fields: { offerId: '', marketIntentId: 'optional' } },
       error: { direction: 'notary → sender', fields: { code: '', message: '', dealId: 'optional' } },
     },
     groupCommands: ['!pool create <amount-each> <coin> <purpose>', '!pool join <id>', '!pool status <id>', '!pool payout <id> @recipient', '!pool cancel <id>'],

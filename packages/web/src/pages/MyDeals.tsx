@@ -64,7 +64,10 @@ export function MyDeals() {
                 <div className="muted deal-deliverable">{d.deliverable.slice(0, 90)}</div>
               </div>
               <div className="deal-figures">
-                <div className="deal-amt">{human(d.amount)} {d.symbol ?? ''}</div>
+                <div className="deal-amt">
+                  {human(d.totalAmount ?? d.amount)} {d.symbol ?? ''}
+                  {d.milestones && d.milestones.length > 1 && <span className="muted"> · {d.milestones.length}×</span>}
+                </div>
                 {d.deadlineAt && <div className="muted deadline"><ClockIcon size={14} className="inline-ico" /> {timeLeft(d.deadlineAt)}</div>}
               </div>
             </div>

@@ -347,9 +347,40 @@ textarea { resize: vertical; min-height: 80px; }
 .badge.RELEASED { background: #6fce8f22; color: var(--green); }
 .badge.REFUNDED { background: #7aa7e022; color: var(--blue); }
 .badge.CANCELLED, .badge.EXPIRED { background: #e07a6a22; color: var(--red); }
+.badge.RELEASE_PENDING { background: #e2b24e33; color: var(--gold-bright); }
+.badge.DISPUTED { background: #e07a6a22; color: var(--red); }
+.badge.RESOLVED { background: #7aa7e022; color: var(--blue); }
 .badge.online { background: #6fce8f22; color: var(--green); }
 .badge.offline { background: #e07a6a22; color: var(--red); }
 .badge.lg { font-size: 14px; }
+
+/* segmented toggle (single vs milestones) */
+.seg { display: inline-flex; gap: 4px; padding: 4px; margin: 4px 0 14px; background: var(--ink-3); border-radius: 10px; }
+.seg-btn {
+  border: 0; background: transparent; color: var(--text-dim); cursor: pointer;
+  padding: 7px 16px; border-radius: 7px; font-size: 13px; font-weight: 600;
+}
+.seg-btn.active { background: var(--ink-1, var(--ink-2)); color: var(--text); box-shadow: 0 1px 3px #0004; }
+
+/* milestone editor rows (new deal) */
+.milestone-row { border: 1px solid var(--ink-3); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+.icon-btn { border: 0; background: transparent; color: var(--text-dim); cursor: pointer; padding: 4px; border-radius: 6px; }
+.icon-btn:hover { color: var(--red); background: #e07a6a1a; }
+
+/* milestone progress list (deal detail) */
+.milestone-list { list-style: none; padding: 0; margin: 10px 0 0; display: flex; flex-direction: column; gap: 8px; }
+.milestone-item { display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 9px; border: 1px solid var(--ink-3); }
+.milestone-item.active { border-color: var(--gold); background: #e2b24e0f; }
+.milestone-item.released { opacity: 0.7; }
+.milestone-amt { font-weight: 600; flex-shrink: 0; }
+.milestone-desc { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* marketplace offer cards */
+.offer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 12px; }
+.offer-card { display: flex; flex-direction: column; gap: 10px; }
+.offer-title { font-size: 16px; margin: 0; }
+.offer-deliverable { margin: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.offer-card .row { margin-top: auto; }
 
 /* deal detail heading + terminal-state card */
 .deal-id { font-size: 24px; }

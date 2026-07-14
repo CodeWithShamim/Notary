@@ -1,3 +1,4 @@
+import type { Offer } from '@notary/shared';
 import { AGENT_API } from './sphere.js';
 
 export interface AgentStatus {
@@ -54,3 +55,5 @@ export const fetchProtocol = (): Promise<Record<string, unknown>> => get('/api/p
 export const fetchPools = (): Promise<{ pools: AgentStatus['pools'] & { pot?: string }[] }> => get('/api/pools');
 export const fetchLeaderboard = (): Promise<{ reputations: Reputation[] }> => get('/api/reputation');
 export const fetchReputation = (tag: string): Promise<Reputation> => get(`/api/reputation/${encodeURIComponent(tag.replace(/^@/, ''))}`);
+export const fetchOffers = (): Promise<{ offers: Offer[] }> => get('/api/offers');
+export const fetchOffer = (offerId: string): Promise<Offer> => get(`/api/offers/${encodeURIComponent(offerId)}`);

@@ -25,8 +25,34 @@ export interface DealRow {
   verdictJson: string | null; //    { buyerBps, rationale, arbiter } once RESOLVED
   buyerProposalBps: number | null; // sealed midpoint-settlement proposal (bps to buyer)
   sellerProposalBps: number | null; // "
+  // Staged (milestone) escrow. `milestonesJson` holds the full ordered plan with
+  // per-stage state; `amount`/`deliverable`/`deliveryHours` above mirror the
+  // ACTIVE milestone (so the pure machine's per-leg math is unchanged). Both null
+  // for a single-shot deal. `totalAmount` is the sum across milestones (= `amount`
+  // for a single deal) and drives display/volume/reputation.
+  milestonesJson: string | null;
+  currentMilestone: number | null;
+  totalAmount: string;
   createdAt: number;
   deadlineAt: number | null;
+  updatedAt: number;
+}
+
+export interface OfferRow {
+  offerId: string;
+  sellerPubkey: string;
+  sellerTag: string;
+  title: string;
+  deliverable: string;
+  amount: string; //   total price (sum across milestones for a staged offer)
+  coinId: string;
+  symbol: string | null;
+  deliveryHours: number;
+  milestonesJson: string | null;
+  marketIntentId: string | null;
+  status: 'open' | 'closed' | 'expired';
+  createdAt: number;
+  expiresAt: number;
   updatedAt: number;
 }
 
@@ -191,6 +217,25 @@ export class Store {
         kind TEXT NOT NULL,
         detail TEXT NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS offers (
+        offerId TEXT PRIMARY KEY,
+        sellerPubkey TEXT NOT NULL,
+        sellerTag TEXT NOT NULL,
+        title TEXT NOT NULL,
+        deliverable TEXT NOT NULL,
+        amount TEXT NOT NULL,
+        coinId TEXT NOT NULL,
+        symbol TEXT,
+        deliveryHours INTEGER NOT NULL,
+        milestonesJson TEXT,
+        marketIntentId TEXT,
+        status TEXT NOT NULL DEFAULT 'open',
+        createdAt INTEGER NOT NULL,
+        expiresAt INTEGER NOT NULL,
+        updatedAt INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_offers_status ON offers(status);
+      CREATE INDEX IF NOT EXISTS idx_offers_seller ON offers(sellerPubkey);
     `);
     // Idempotent upgrades for DBs created before arbitration shipped.
     this.addColumn('deals', 'buyerEvidence', 'TEXT');
@@ -198,6 +243,12 @@ export class Store {
     this.addColumn('deals', 'verdictJson', 'TEXT');
     this.addColumn('deals', 'buyerProposalBps', 'INTEGER');
     this.addColumn('deals', 'sellerProposalBps', 'INTEGER');
+    // Idempotent upgrades for DBs created before staged (milestone) escrow shipped.
+    this.addColumn('deals', 'milestonesJson', 'TEXT');
+    this.addColumn('deals', 'currentMilestone', 'INTEGER');
+    // totalAmount defaults to the single-deal amount for pre-existing rows.
+    this.addColumn('deals', 'totalAmount', 'TEXT');
+    this.db.exec('UPDATE deals SET totalAmount = amount WHERE totalAmount IS NULL');
   }
 
   /** ALTER TABLE ADD COLUMN, but a no-op if the column already exists. */
@@ -239,22 +290,26 @@ export class Store {
         `INSERT INTO deals (dealId, state, buyerPubkey, buyerTag, sellerPubkey, sellerTag, amount,
           coinId, symbol, feeBps, deliverable, deliveryHours, proof, paymentRequestId,
           fundedTransferId, settlementJson, buyerEvidence, sellerEvidence, verdictJson,
-          buyerProposalBps, sellerProposalBps, createdAt, deadlineAt, updatedAt)
+          buyerProposalBps, sellerProposalBps, milestonesJson, currentMilestone, totalAmount,
+          createdAt, deadlineAt, updatedAt)
          VALUES (@dealId, @state, @buyerPubkey, @buyerTag, @sellerPubkey, @sellerTag, @amount,
           @coinId, @symbol, @feeBps, @deliverable, @deliveryHours, @proof, @paymentRequestId,
           @fundedTransferId, @settlementJson, @buyerEvidence, @sellerEvidence, @verdictJson,
-          @buyerProposalBps, @sellerProposalBps, @createdAt, @deadlineAt, @updatedAt)`,
+          @buyerProposalBps, @sellerProposalBps, @milestonesJson, @currentMilestone, @totalAmount,
+          @createdAt, @deadlineAt, @updatedAt)`,
       )
       .run(d);
   }
   updateDeal(d: DealRow): void {
     this.db
       .prepare(
-        `UPDATE deals SET state=@state, sellerPubkey=@sellerPubkey, proof=@proof,
+        `UPDATE deals SET state=@state, sellerPubkey=@sellerPubkey, amount=@amount,
+          deliverable=@deliverable, deliveryHours=@deliveryHours, proof=@proof,
           paymentRequestId=@paymentRequestId, fundedTransferId=@fundedTransferId,
           settlementJson=@settlementJson, buyerEvidence=@buyerEvidence,
           sellerEvidence=@sellerEvidence, verdictJson=@verdictJson,
           buyerProposalBps=@buyerProposalBps, sellerProposalBps=@sellerProposalBps,
+          milestonesJson=@milestonesJson, currentMilestone=@currentMilestone, totalAmount=@totalAmount,
           deadlineAt=@deadlineAt, updatedAt=@updatedAt
          WHERE dealId=@dealId`,
       )
@@ -283,7 +338,7 @@ export class Store {
   totalVolume(): { coinId: string; symbol: string | null; total: string }[] {
     // SQLite sums as float — recompute exactly in JS to keep the no-floats rule.
     const rows = this.db
-      .prepare("SELECT coinId, symbol, amount FROM deals WHERE state IN ('FUNDED','DELIVERED_CLAIMED','DISPUTED','RELEASED','REFUNDED','RESOLVED')")
+      .prepare("SELECT coinId, symbol, totalAmount AS amount FROM deals WHERE state IN ('FUNDED','DELIVERED_CLAIMED','RELEASE_PENDING','DISPUTED','RELEASED','REFUNDED','RESOLVED')")
       .all() as { coinId: string; symbol: string | null; amount: string }[];
     const sums = new Map<string, { symbol: string | null; total: bigint }>();
     for (const r of rows) {
@@ -298,7 +353,7 @@ export class Store {
    *  reputation endpoint aggregates these into per-nametag scores). */
   reputationRows(): ReputationDealRow[] {
     return this.db
-      .prepare('SELECT state, buyerTag, sellerTag, amount, coinId, symbol, createdAt, updatedAt FROM deals')
+      .prepare('SELECT state, buyerTag, sellerTag, totalAmount AS amount, coinId, symbol, createdAt, updatedAt FROM deals')
       .all() as ReputationDealRow[];
   }
 
@@ -386,6 +441,40 @@ export class Store {
     return this.db.prepare('SELECT * FROM pool_members WHERE requestId = ?').get(requestId) as
       | PoolMemberRow
       | undefined;
+  }
+
+  // -- marketplace offers -------------------------------------------------------------
+  insertOffer(o: OfferRow): void {
+    this.db
+      .prepare(
+        `INSERT INTO offers (offerId, sellerPubkey, sellerTag, title, deliverable, amount, coinId,
+          symbol, deliveryHours, milestonesJson, marketIntentId, status, createdAt, expiresAt, updatedAt)
+         VALUES (@offerId, @sellerPubkey, @sellerTag, @title, @deliverable, @amount, @coinId,
+          @symbol, @deliveryHours, @milestonesJson, @marketIntentId, @status, @createdAt, @expiresAt, @updatedAt)`,
+      )
+      .run(o);
+  }
+  updateOffer(o: OfferRow): void {
+    this.db
+      .prepare(
+        `UPDATE offers SET status=@status, marketIntentId=@marketIntentId, updatedAt=@updatedAt WHERE offerId=@offerId`,
+      )
+      .run(o);
+  }
+  getOffer(offerId: string): OfferRow | undefined {
+    return this.db.prepare('SELECT * FROM offers WHERE offerId = ?').get(offerId) as OfferRow | undefined;
+  }
+  listOpenOffers(): OfferRow[] {
+    return this.db.prepare("SELECT * FROM offers WHERE status = 'open' ORDER BY createdAt DESC").all() as OfferRow[];
+  }
+  countOpenOffersBySeller(sellerPubkey: string): number {
+    const row = this.db
+      .prepare("SELECT COUNT(*) AS n FROM offers WHERE sellerPubkey = ? AND status = 'open'")
+      .get(sellerPubkey) as { n: number };
+    return row.n;
+  }
+  expiredOpenOffers(now: number): OfferRow[] {
+    return this.db.prepare("SELECT * FROM offers WHERE status = 'open' AND expiresAt <= ?").all(now) as OfferRow[];
   }
 
   // -- global ledger ----------------------------------------------------------------
