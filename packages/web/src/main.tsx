@@ -13,6 +13,7 @@ import { ConnectProvider } from './state/ConnectContext.js';
 import './styles/web3.css';
 import './styles.css';
 import './styles/landing.css';
+import './styles/hero-video.css';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { refetchInterval: 10_000, retry: 1, staleTime: 5_000 } },

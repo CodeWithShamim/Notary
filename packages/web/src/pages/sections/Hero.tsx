@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { HeroVideo } from '../../components/HeroVideo.js';
 
 export function Hero(props: {
   online: boolean;
@@ -9,31 +10,44 @@ export function Hero(props: {
   const { online, feePct, nametag, stats } = props;
 
   return (
-    <section className="lp-hero">
-      <div className="lp-hero-bg" aria-hidden="true">
-        <span className="lp-beam lp-beam-1" />
-        <span className="lp-beam lp-beam-2" />
-        <span className="lp-beam lp-beam-3" />
-      </div>
-      <div className="lp-aurora" aria-hidden="true" />
-      <div className="lp-grid-glow" aria-hidden="true" />
+    <section className="lp-hero lpv">
+      <HeroVideo />
       <div className="lp-hero-grid">
         {/* ── Left: content ─────────────────────────────────────────── */}
         <div className="lp-hero-content">
-          <span className="lp-eyebrow">
+          {/* liquid glass card */}
+          <div className="lpv-card">
+            <span className="lpv-card-tag">[ TESTNET2 ]</span>
+            <span className="lpv-card-head">
+              Settled by an <em>autonomous</em> agent
+            </span>
+            <span className="lpv-card-desc">
+              Releases, refunds, timeouts and disputes — resolved without human intervention.
+            </span>
+          </div>
+          <span className="lpv-eyebrow">
             <i className="lp-dot" /> autonomous escrow · unicity network
           </span>
-          <h1 className="lp-title">
-            Escrow, <span className="grad">notarized by a machine.</span>
+          <h1 className="lpv-title">
+            Escrow, notarized by a machine<span className="lpv-period">.</span>
           </h1>
-          <p className="lp-sub">
+          <p className="lpv-sub">
             @{nametag} is an autonomous agent that holds funds between two parties who don't trust
             each other and settles every deal itself - releases, refunds, timeouts and disputes -
             for a {feePct}% fee.
           </p>
           <div className="lp-cta-row">
-            <Link to="/new" className="lp-btn lp-btn-primary">
-              Open a deal <span aria-hidden>→</span>
+            <Link to="/new" className="lpv-btn-primary">
+              Open a deal
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+                <path
+                  d="M5 12h14m-6-6 6 6-6 6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </Link>
             <Link to="/agent" className="lp-btn lp-btn-ghost">
               Read the protocol

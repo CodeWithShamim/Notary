@@ -1,0 +1,241 @@
+/* ── Video hero (lpv-*) ───────────────────────────────────────────────
+   HLS background video + liquid-glass card layered under the existing
+   .lp-hero content. Scoped to lpv-* so the rest of landing.css is
+   untouched. Dark theme is the canonical look; light theme dials the
+   video back to a tint so the paper canvas still reads. */
+
+.lp-hero.lpv {
+  background: #070b0a;
+}
+
+/* ── Background media stack ──────────────────────────────────────── */
+.lpv-media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.lpv-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.6;
+}
+/* readability washes */
+.lpv-shade {
+  position: absolute;
+  inset: 0;
+}
+.lpv-shade-left {
+  background: linear-gradient(to right, #070b0a 0%, #070b0acc 28%, transparent 62%);
+}
+.lpv-shade-bottom {
+  background: linear-gradient(to top, #070b0a 0%, #070b0a99 22%, transparent 48%);
+}
+/* three 1px vertical grid lines at 25 / 50 / 75% — desktop only */
+.lpv-gridlines {
+  position: absolute;
+  inset: 0;
+  display: none;
+  background-image:
+    linear-gradient(#ffffff1a, #ffffff1a),
+    linear-gradient(#ffffff1a, #ffffff1a),
+    linear-gradient(#ffffff1a, #ffffff1a);
+  background-repeat: no-repeat;
+  background-size: 1px 100%;
+  background-position: 25% 0, 50% 0, 75% 0;
+}
+@media (min-width: 900px) {
+  .lpv-gridlines { display: block; }
+}
+/* central ellipse glow (SVG w/ 25px gaussian blur) */
+.lpv-glow {
+  position: absolute;
+  top: -6%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(1200px, 120vw);
+  height: 500px;
+  mix-blend-mode: screen;
+}
+
+/* ── Liquid glass card ────────────────────────────────────────────── */
+.lpv-card {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  transform: translateY(-50px);
+  margin-bottom: -26px; /* reclaim part of the shift so the eyebrow doesn't drift */
+  border-radius: 18px;
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.01);
+  background-blend-mode: luminosity;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+/* gradient border frame via masked padding ring */
+.lpv-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.4px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.06));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.lpv-card-tag {
+  font-family: var(--lp-font-body);
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  color: #5ed29c;
+}
+.lpv-card-head {
+  font-family: 'Inter', var(--lp-font-body);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+.lpv-card-head em {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 20px;
+  color: #9fe8c8;
+}
+.lpv-card-desc {
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+/* ── Typography ───────────────────────────────────────────────────── */
+.lpv-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Plus Jakarta Sans', var(--lp-font-body);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #5ed29c;
+}
+.lpv-title {
+  margin: 18px 0 0;
+  font-family: 'Inter', var(--lp-font-body);
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: clamp(40px, 6.4vw, 72px);
+  line-height: 1.0;
+  letter-spacing: -0.03em;
+  color: #fff;
+}
+.lpv-title .lpv-period { color: #5ed29c; }
+.lpv-sub {
+  margin: 20px 0 0;
+  max-width: 512px;
+  font-family: 'Inter', var(--lp-font-body);
+  font-size: 14px;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* ── Primary CTA ──────────────────────────────────────────────────── */
+.lpv-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 28px;
+  border-radius: 999px;
+  background: #5ed29c;
+  color: #070b0a;
+  font-family: 'Inter', var(--lp-font-body);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: transform 0.18s ease, box-shadow 0.22s ease, background 0.2s ease;
+  box-shadow: 0 8px 26px #5ed29c44, inset 0 1px 0 #ffffff50;
+}
+.lpv-btn-primary:hover {
+  color: #070b0a;
+  background: #74ddab;
+  transform: translateY(-2px);
+  box-shadow: 0 14px 40px #5ed29c55, inset 0 1px 0 #ffffff60;
+}
+.lpv-btn-primary:active { transform: translateY(0); }
+.lpv-btn-primary svg { transition: transform 0.18s ease; }
+.lpv-btn-primary:hover svg { transform: translateX(3px); }
+
+/* keep hero text readable over the video regardless of --lp vars */
+.lp-hero.lpv .lp-status-meta { color: rgba(255, 255, 255, 0.55); }
+.lp-hero.lpv .lp-stat-k { color: rgba(255, 255, 255, 0.55); }
+.lp-hero.lpv .lp-stat-v { color: #fff; }
+
+/* ── Light theme ──────────────────────────────────────────────────────
+   A video hero can't go fully light, so tint it: video fades to a soft
+   wash, shades flip to the paper color, glass card inks its text. */
+:root[data-theme='light'] .lp-hero.lpv { background: #f4f1ea; }
+:root[data-theme='light'] .lpv-video { opacity: 0.28; }
+:root[data-theme='light'] .lpv-shade-left {
+  background: linear-gradient(to right, #f4f1ea 0%, #f4f1eacc 28%, transparent 62%);
+}
+:root[data-theme='light'] .lpv-shade-bottom {
+  background: linear-gradient(to top, #f4f1ea 0%, #f4f1ea99 22%, transparent 48%);
+}
+:root[data-theme='light'] .lpv-gridlines {
+  background-image:
+    linear-gradient(#17122818, #17122818),
+    linear-gradient(#17122818, #17122818),
+    linear-gradient(#17122818, #17122818);
+}
+:root[data-theme='light'] .lpv-glow { opacity: 0.5; mix-blend-mode: multiply; }
+:root[data-theme='light'] .lpv-card {
+  background: rgba(23, 18, 40, 0.02);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6);
+  color: #1b1a24;
+}
+:root[data-theme='light'] .lpv-card::before {
+  background: linear-gradient(180deg, rgba(23, 18, 40, 0.35), rgba(23, 18, 40, 0.06));
+}
+:root[data-theme='light'] .lpv-card-tag { color: #1e9b66; }
+:root[data-theme='light'] .lpv-card-head em { color: #157a52; }
+:root[data-theme='light'] .lpv-card-desc { color: #5b5968; }
+:root[data-theme='light'] .lpv-eyebrow { color: #1e9b66; }
+:root[data-theme='light'] .lpv-title { color: #1b1a24; }
+:root[data-theme='light'] .lpv-title .lpv-period { color: #1e9b66; }
+:root[data-theme='light'] .lpv-sub { color: #4c4a58; }
+:root[data-theme='light'] .lp-hero.lpv .lp-status-meta,
+:root[data-theme='light'] .lp-hero.lpv .lp-stat-k { color: #5b5968; }
+:root[data-theme='light'] .lp-hero.lpv .lp-stat-v { color: #1b1a24; }
+
+/* ── Responsive ───────────────────────────────────────────────────── */
+@media (max-width: 880px) {
+  /* content leads on mobile — override landing.css's console-first order */
+  .lp-hero.lpv .lp-hero-visual { order: 0; }
+  .lpv-card { margin-inline: auto; }
+  .lpv-sub { margin-inline: auto; }
+}
+@media (max-width: 720px) {
+  .lpv-card {
+    width: 172px;
+    height: 172px;
+    transform: translateY(-24px);
+    margin-bottom: -8px;
+  }
+}
