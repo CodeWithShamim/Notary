@@ -21,7 +21,7 @@ const TERMINAL_LABEL: Partial<Record<string, string>> = {
 
 export function DealDetail() {
   const { dealId = '' } = useParams();
-  const { deals, nametag, fundEscrow, refreshDeals } = useConnect();
+  const { deals, nametag, address, fundEscrow, refreshDeals } = useConnect();
   const qc = useQueryClient();
   const stored = deals[dealId];
   const shortId = dealId ? dealId.slice(0, 8) : '';
@@ -86,8 +86,22 @@ export function DealDetail() {
     if (syncTimer.current) clearInterval(syncTimer.current);
   }, []);
 
-  const isBuyer = snap?.buyerTag?.toLowerCase() === nametag?.toLowerCase();
-  const isSeller = snap?.sellerTag?.toLowerCase() === nametag?.toLowerCase();
+  // Pull the DM snapshot as soon as the page opens (and on deal switch) instead
+  // of waiting up to 8s for the background poll — otherwise a just-accepted deal
+  // shows AWAITING_FUNDS from the public trail while the buyer's role-gated
+  // "Fund escrow" card is still missing its snapshot.
+  useEffect(() => {
+    if (dealId) void refreshDeals();
+  }, [dealId, refreshDeals]);
+
+  // Am I a party to this deal? Match on nametag, falling back to pubkey/address
+  // so a missing or differently-formatted wallet nametag doesn't hide my actions.
+  const me = nametag?.toLowerCase();
+  const myAddr = address?.toLowerCase();
+  const isParty = (tag?: string, pubkey?: string) =>
+    (!!me && tag?.toLowerCase() === me) || (!!myAddr && !!pubkey && pubkey.toLowerCase() === myAddr);
+  const isBuyer = isParty(snap?.buyerTag, snap?.buyer);
+  const isSeller = isParty(snap?.sellerTag, snap?.seller);
 
   const act = async (label: string, expected: DealState | null, fn: () => Promise<unknown>) => {
     setBusy(label);
@@ -180,6 +194,15 @@ export function DealDetail() {
               {snap.dispute.verdict.rationale && <p className="mt-sm">“{snap.dispute.verdict.rationale}”</p>}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Trail-only view: the public API knows the state but this browser hasn't
+          pulled the @notary DM snapshot yet, so we can't tell if the viewer is the
+          buyer/seller or render their action. Say so instead of showing a bare page. */}
+      {!snap && stepIndex >= 0 && (
+        <div className="card">
+          <p className="muted"><span className="spinner" /> Syncing this deal from your wallet… If you're a party to it, your actions appear once the encrypted deal history loads. Reconnect your Sphere wallet if this persists.</p>
         </div>
       )}
 

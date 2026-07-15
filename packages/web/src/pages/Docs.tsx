@@ -18,6 +18,7 @@ const TOC: { id: string; label: string }[] = [
   { id: 'api', label: 'Read-only API' },
   { id: 'config', label: 'Configuration' },
   { id: 'security', label: 'Security model' },
+  { id: 'roadmap', label: 'Roadmap' },
   { id: 'faq', label: 'Troubleshooting' },
 ];
 
@@ -556,6 +557,55 @@ DISPUTED ── evidence window ─▶ arbiter / auto-settle verdict ─▶ RESO
               A mainnet key would be a secret and must never be committed.
             </li>
           </ul>
+        </section>
+
+        {/* ── Roadmap ──────────────────────────────────────────── */}
+        <section id="roadmap" className="doc-section">
+          <h2>Roadmap</h2>
+          <p>
+            Notary is complete and verified end-to-end on <b>testnet2</b>. What&rsquo;s next, roughly in order:
+          </p>
+          <div className="doc-cards">
+            <div className="card">
+              <h3>Now &rarr; next</h3>
+              <ul className="doc-list">
+                <li>
+                  <b>Mainnet launch.</b> Harden secret handling (a mainnet gateway key <i>is</i> a secret), then
+                  run the same flows against mainnet with real UCT and a real fee.
+                </li>
+                <li>
+                  <b>Treasury auto-swap.</b> Turn <code>TREASURY_AUTO_SWAP</code> on by default once the SDK&rsquo;s
+                  P2P swap path leaves the experimental accounting module; today the agent only publishes signed
+                  swap intents to the market.
+                </li>
+                <li>
+                  <b>Deal event webhooks / push.</b> Subscribe to <code>deal.update</code> over a webhook or push
+                  channel instead of polling <code>/api/deals/:id/events</code>.
+                </li>
+              </ul>
+            </div>
+            <div className="card">
+              <h3>Later</h3>
+              <ul className="doc-list">
+                <li>
+                  <b>Human arbiter escalation.</b> An optional appeal from the AI arbiter&rsquo;s split to a human
+                  panel when a party contests the verdict, with the same public-ledger reasoning trail.
+                </li>
+                <li>
+                  <b>Portable reputation.</b> Sign and export the per-nametag track record so it travels across
+                  agents and can be verified independently of any one instance.
+                </li>
+                <li>
+                  <b>Richer proofs.</b> Content-addressed deliverable attachments referenced from{' '}
+                  <code>deal.evidence</code>, so arbitration reads the artifact, not just a URL.
+                </li>
+                <li>
+                  <b>Threshold group pools.</b> n-of-m approvals for pool payouts, beyond the current
+                  creator-only model.
+                </li>
+              </ul>
+            </div>
+          </div>
         </section>
 
         {/* ── Troubleshooting ──────────────────────────────────── */}

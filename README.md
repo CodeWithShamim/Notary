@@ -315,6 +315,35 @@ Web app env (`VITE_*`): `VITE_UNICITY_API_KEY`, `VITE_NOTARY_TAG`, `VITE_AGENT_A
 
 ---
 
+## Roadmap
+
+Notary is complete and verified end-to-end on **testnet2**. What's next, roughly
+in order:
+
+**Now → next**
+
+- **Mainnet launch.** Harden secret handling (a mainnet gateway key _is_ a
+  secret), then run the same flows against mainnet with real UCT and a real fee.
+- **Treasury auto-swap.** Turn `TREASURY_AUTO_SWAP` on by default once the SDK's
+  P2P swap path leaves the experimental accounting module (see NOTES §5); today
+  the agent only publishes signed swap intents to the market.
+- **Deal event webhooks / push.** Let integrators subscribe to `deal.update`
+  over a webhook or push channel instead of polling `/api/deals/:id/events`.
+
+**Later**
+
+- **Human arbiter escalation.** An optional appeal from the AI arbiter's split to
+  a human panel when a party contests the verdict, with the same public-ledger
+  reasoning trail.
+- **Portable reputation.** Sign and export the per-nametag track record so it
+  travels across agents and can be verified independently of any one instance.
+- **Richer proofs.** Content-addressed deliverable attachments referenced from
+  `deal.evidence`, so arbitration reads the artifact, not just a URL.
+- **Threshold group pools.** n-of-m approvals for pool payouts, beyond the
+  current creator-only model.
+
+---
+
 ## Deployment
 
 - **Agent** → any always-on Node host (Railway / Fly / Render). Persist
