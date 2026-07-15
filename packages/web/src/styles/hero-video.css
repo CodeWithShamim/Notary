@@ -190,39 +190,39 @@
 /* ── Light theme ──────────────────────────────────────────────────────
    A video hero can't go fully light, so tint it: video fades to a soft
    wash, shades flip to the paper color, glass card inks its text. */
-:root[data-theme='light'] .lp-hero.lpv { background: #f4f1ea; }
+:root[data-theme='light'] .lp-hero.lpv { background: #eef3ee; }
 :root[data-theme='light'] .lpv-video { opacity: 0.28; }
 :root[data-theme='light'] .lpv-shade-left {
-  background: linear-gradient(to right, #f4f1ea 0%, #f4f1eacc 28%, transparent 62%);
+  background: linear-gradient(to right, #eef3ee 0%, #eef3eecc 28%, transparent 62%);
 }
 :root[data-theme='light'] .lpv-shade-bottom {
-  background: linear-gradient(to top, #f4f1ea 0%, #f4f1ea99 22%, transparent 48%);
+  background: linear-gradient(to top, #eef3ee 0%, #eef3ee99 22%, transparent 48%);
 }
 :root[data-theme='light'] .lpv-gridlines {
   background-image:
-    linear-gradient(#17122818, #17122818),
-    linear-gradient(#17122818, #17122818),
-    linear-gradient(#17122818, #17122818);
+    linear-gradient(#16281f18, #16281f18),
+    linear-gradient(#16281f18, #16281f18),
+    linear-gradient(#16281f18, #16281f18);
 }
 :root[data-theme='light'] .lpv-glow { opacity: 0.5; mix-blend-mode: multiply; }
 :root[data-theme='light'] .lpv-card {
-  background: rgba(23, 18, 40, 0.02);
+  background: rgba(20, 32, 26, 0.02);
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6);
-  color: #1b1a24;
+  color: #17211b;
 }
 :root[data-theme='light'] .lpv-card::before {
-  background: linear-gradient(180deg, rgba(23, 18, 40, 0.35), rgba(23, 18, 40, 0.06));
+  background: linear-gradient(180deg, rgba(20, 32, 26, 0.35), rgba(20, 32, 26, 0.06));
 }
-:root[data-theme='light'] .lpv-card-tag { color: #1e9b66; }
+:root[data-theme='light'] .lpv-card-tag { color: #178a5a; }
 :root[data-theme='light'] .lpv-card-head em { color: #157a52; }
-:root[data-theme='light'] .lpv-card-desc { color: #5b5968; }
-:root[data-theme='light'] .lpv-eyebrow { color: #1e9b66; }
-:root[data-theme='light'] .lpv-title { color: #1b1a24; }
-:root[data-theme='light'] .lpv-title .lpv-period { color: #1e9b66; }
-:root[data-theme='light'] .lpv-sub { color: #4c4a58; }
+:root[data-theme='light'] .lpv-card-desc { color: #5d6f65; }
+:root[data-theme='light'] .lpv-eyebrow { color: #178a5a; }
+:root[data-theme='light'] .lpv-title { color: #17211b; }
+:root[data-theme='light'] .lpv-title .lpv-period { color: #178a5a; }
+:root[data-theme='light'] .lpv-sub { color: #4b5c52; }
 :root[data-theme='light'] .lp-hero.lpv .lp-status-meta,
-:root[data-theme='light'] .lp-hero.lpv .lp-stat-k { color: #5b5968; }
-:root[data-theme='light'] .lp-hero.lpv .lp-stat-v { color: #1b1a24; }
+:root[data-theme='light'] .lp-hero.lpv .lp-stat-k { color: #5d6f65; }
+:root[data-theme='light'] .lp-hero.lpv .lp-stat-v { color: #17211b; }
 
 /* ── Responsive ───────────────────────────────────────────────────── */
 @media (max-width: 880px) {

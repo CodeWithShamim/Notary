@@ -2,8 +2,8 @@
 
 .boot-overlay {
   --boot-ink: #0e0e12;
-  --boot-gold: #e2b24e;
-  --boot-gold-bright: #f4c964;
+  --boot-gold: #5ed29c;
+  --boot-gold-bright: #7be3b1;
   --boot-cyan: var(--w3-cyan, #22d3ee);
   --boot-violet: var(--w3-violet, #a855f7);
   --boot-magenta: var(--w3-magenta, #ec4899);

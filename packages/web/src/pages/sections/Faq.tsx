@@ -37,7 +37,7 @@ export function Faq() {
       <Reveal from="up">
         <div className="lp-head">
           <span className="lp-kicker">faq</span>
-          <h2 className="lp-h2">Questions, answered.</h2>
+          <h2 className="lp-h2">Questions, <em>answered</em>.</h2>
           <p className="lp-lede">
             The things people ask before they trust an agent with their money.
           </p>

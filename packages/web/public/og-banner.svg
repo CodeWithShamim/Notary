@@ -1,21 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-label="Notary — trustless escrow on Unicity">
   <defs>
-    <radialGradient id="bg" cx="50%" cy="-10%" r="90%">
-      <stop offset="0%" stop-color="#1d1a26"/>
-      <stop offset="60%" stop-color="#0e0e12"/>
+    <radialGradient id="bg" cx="50%" cy="-10%" r="95%">
+      <stop offset="0%" stop-color="#0d1c15"/>
+      <stop offset="60%" stop-color="#070b0a"/>
     </radialGradient>
     <radialGradient id="seal" cx="35%" cy="30%" r="80%">
-      <stop offset="0%" stop-color="#f4c964"/>
-      <stop offset="100%" stop-color="#8a6d33"/>
+      <stop offset="0%" stop-color="#7be3b1"/>
+      <stop offset="100%" stop-color="#3e8f6c"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#5ed29c" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#5ed29c" stop-opacity="0"/>
     </radialGradient>
   </defs>
 
   <rect width="1200" height="630" fill="url(#bg)"/>
 
-  <!-- Seal / logo -->
+  <!-- Faint hairline frame, matching the site's card borders -->
+  <rect x="1" y="1" width="1198" height="628" fill="none" stroke="#4a5e54" stroke-opacity="0.33" stroke-width="2"/>
+
+  <!-- Seal / logo with soft mint glow -->
+  <circle cx="176" cy="230" r="170" fill="url(#glow)"/>
   <g transform="translate(96 150)">
     <circle cx="80" cy="80" r="80" fill="url(#seal)"/>
-    <g transform="translate(30 30)" fill="none" stroke="#0e0e12" stroke-width="4.5"
+    <g transform="translate(30 30)" fill="none" stroke="#070b0a" stroke-width="4.5"
        stroke-linecap="round" stroke-linejoin="round">
       <path d="M50 12v76M29 88h42"/>
       <path d="M12 29h8c8 0 20-4 30-8 8 4 20 8 30 8h8"/>
@@ -26,23 +34,23 @@
 
   <!-- Wordmark + tagline -->
   <text x="288" y="222" font-family="'Space Grotesk', 'Segoe UI', sans-serif" font-weight="700"
-        font-size="88" fill="#eceadf" letter-spacing="-1">Notary</text>
+        font-size="88" fill="#ecf3ee" letter-spacing="-1">Notary</text>
   <text x="290" y="290" font-family="'Inter', 'Segoe UI', sans-serif" font-weight="600"
-        font-size="34" fill="#e2b24e">Trustless escrow &amp; arbitration on Unicity</text>
+        font-size="34" fill="#5ed29c">Trustless escrow &amp; arbitration on Unicity</text>
 
   <!-- Description -->
   <text x="96" y="410" font-family="'Inter', 'Segoe UI', sans-serif" font-weight="400"
-        font-size="30" fill="#9b99a8">Hire @notary, an autonomous escrow agent. 1% fee, no accounts,</text>
+        font-size="30" fill="#98a8a0">Hire @notary, an autonomous escrow agent. 1% fee, no accounts,</text>
   <text x="96" y="452" font-family="'Inter', 'Segoe UI', sans-serif" font-weight="400"
-        font-size="30" fill="#9b99a8">your keys stay in your browser.</text>
+        font-size="30" fill="#98a8a0">your keys stay in your browser.</text>
 
   <!-- Chips -->
   <g font-family="'Inter', 'Segoe UI', sans-serif" font-weight="600" font-size="24">
-    <rect x="96" y="520" width="220" height="56" rx="28" fill="none" stroke="#4a4a5e" stroke-width="1.5"/>
-    <text x="128" y="556" fill="#eceadf">Milestone escrow</text>
-    <rect x="336" y="520" width="200" height="56" rx="28" fill="none" stroke="#4a4a5e" stroke-width="1.5"/>
-    <text x="368" y="556" fill="#eceadf">AI arbitration</text>
-    <rect x="556" y="520" width="180" height="56" rx="28" fill="none" stroke="#4a4a5e" stroke-width="1.5"/>
-    <text x="588" y="556" fill="#eceadf">Testnet2</text>
+    <rect x="96" y="520" width="240" height="56" rx="28" fill="none" stroke="#4a5e54" stroke-opacity="0.55" stroke-width="1.5"/>
+    <text x="128" y="556" fill="#ecf3ee">Milestone escrow</text>
+    <rect x="356" y="520" width="204" height="56" rx="28" fill="none" stroke="#4a5e54" stroke-opacity="0.55" stroke-width="1.5"/>
+    <text x="388" y="556" fill="#ecf3ee">AI arbitration</text>
+    <rect x="580" y="520" width="160" height="56" rx="28" fill="none" stroke="#4a5e54" stroke-opacity="0.55" stroke-width="1.5"/>
+    <text x="612" y="556" fill="#ecf3ee">Testnet2</text>
   </g>
 </svg>

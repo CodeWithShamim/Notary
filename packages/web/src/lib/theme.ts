@@ -2,9 +2,9 @@
  * Theme (dark / light) management.
  *
  * The active theme is reflected as `data-theme` on `<html>` and persisted to
- * localStorage. An inline script in index.html applies the stored/system theme
- * before first paint (no flash), so this module only has to keep it in sync
- * afterwards and animate transitions.
+ * localStorage. An inline script in index.html applies the stored theme
+ * (defaulting to dark) before first paint (no flash), so this module only has
+ * to keep it in sync afterwards and animate transitions.
  */
 
 export type Theme = 'dark' | 'light';
@@ -14,15 +14,6 @@ const STORAGE_KEY = 'notary-theme';
 export function getTheme(): Theme {
   const attr = document.documentElement.getAttribute('data-theme');
   return attr === 'light' ? 'light' : 'dark';
-}
-
-/** Whether the user has explicitly chosen a theme (vs. following the system). */
-function hasStoredTheme(): boolean {
-  try {
-    return localStorage.getItem(STORAGE_KEY) != null;
-  } catch {
-    return false;
-  }
 }
 
 function persist(theme: Theme): void {
@@ -91,17 +82,4 @@ export function toggleTheme(origin?: { x: number; y: number }): Theme {
   const next: Theme = getTheme() === 'dark' ? 'light' : 'dark';
   setTheme(next, origin);
   return next;
-}
-
-/**
- * Keep following the OS theme until the user makes an explicit choice. Returns
- * an unsubscribe function.
- */
-export function watchSystemTheme(): () => void {
-  const mql = window.matchMedia('(prefers-color-scheme: light)');
-  const onChange = (e: MediaQueryListEvent) => {
-    if (!hasStoredTheme()) apply(e.matches ? 'light' : 'dark');
-  };
-  mql.addEventListener('change', onChange);
-  return () => mql.removeEventListener('change', onChange);
 }

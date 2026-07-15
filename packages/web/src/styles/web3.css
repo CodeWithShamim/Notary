@@ -4,9 +4,9 @@
    tokens already owned by styles.css (--ink-*, --gold, --text, fonts, etc.). */
 :root {
   --w3-cyan: #22d3ee;
-  --w3-violet: #a855f7;
-  --w3-magenta: #ec4899;
-  --w3-blue: #3b82f6;
+  --w3-violet: #34d399;
+  --w3-magenta: #4ade80;
+  --w3-blue: #14b8a6;
 }
 
 /* Shared neon utility keyframes. */

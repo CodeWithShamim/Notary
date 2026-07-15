@@ -73,8 +73,8 @@ export function useMeta({ title, description, root }: PageMeta): void {
     // Upgrade the banner/logo to absolute URLs. index.html can only ship relative
     // paths (the origin is unknown at build time); link-unfurlers want absolute.
     const abs = (path: string) => new URL(path, window.location.origin).href;
-    setMeta('property', 'og:image', abs('/og-banner.svg'));
+    setMeta('property', 'og:image', abs('/og-banner.png'));
     setMeta('property', 'og:logo', abs('/favicon.svg'));
-    setMeta('name', 'twitter:image', abs('/og-banner.svg'));
+    setMeta('name', 'twitter:image', abs('/og-banner.png'));
   }, [title, description, root]);
 }

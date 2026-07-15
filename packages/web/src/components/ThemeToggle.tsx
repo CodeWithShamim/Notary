@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { getTheme, toggleTheme, watchSystemTheme, type Theme } from '../lib/theme.js';
+import { useState } from 'react';
+import { getTheme, toggleTheme, type Theme } from '../lib/theme.js';
 
 /**
  * Sun/moon theme switch for the navbar. Toggling flips `data-theme` on <html>
@@ -7,13 +7,6 @@ import { getTheme, toggleTheme, watchSystemTheme, type Theme } from '../lib/them
  */
 export function ThemeToggle() {
   const [theme, setThemeState] = useState<Theme>(() => getTheme());
-
-  // Follow the OS theme until the user makes an explicit choice, and stay in
-  // sync if it changes elsewhere.
-  useEffect(() => {
-    setThemeState(getTheme());
-    return watchSystemTheme();
-  }, []);
 
   const isDark = theme === 'dark';
 

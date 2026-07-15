@@ -35,7 +35,7 @@ export function Architecture() {
       <Reveal from="up">
         <div className="lp-head">
           <span className="lp-kicker">architecture</span>
-          <h2 className="lp-h2">Where the money actually sits.</h2>
+          <h2 className="lp-h2">Where the money <em>actually</em> sits.</h2>
           <p className="lp-lede">
             Funds never touch a person. They move from the buyer into the agent&apos;s custody, and
             the agent settles the deal itself on the Unicity ledger — releasing to the seller or
@@ -54,18 +54,18 @@ export function Architecture() {
           >
             <defs>
               <linearGradient id="arch-wire" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0" stopColor="#8b5cf6" />
-                <stop offset="0.5" stopColor="#6366f1" />
+                <stop offset="0" stopColor="#34d399" />
+                <stop offset="0.5" stopColor="#2dd4bf" />
                 <stop offset="1" stopColor="#22d3ee" />
               </linearGradient>
               <radialGradient id="arch-hub" cx="0.5" cy="0.4" r="0.75">
-                <stop offset="0" stopColor="#a78bfa" />
-                <stop offset="0.55" stopColor="#6366f1" />
-                <stop offset="1" stopColor="#3b1f8f" />
+                <stop offset="0" stopColor="#7be3b1" />
+                <stop offset="0.55" stopColor="#2dd4bf" />
+                <stop offset="1" stopColor="#0e4634" />
               </radialGradient>
               <linearGradient id="arch-ledger" x1="0" y1="0" x2="1" y2="0">
                 <stop offset="0" stopColor="#22d3ee" />
-                <stop offset="1" stopColor="#8b5cf6" />
+                <stop offset="1" stopColor="#34d399" />
               </linearGradient>
               <filter id="arch-glow" x="-60%" y="-60%" width="220%" height="220%">
                 <feGaussianBlur stdDeviation="6" result="b" />

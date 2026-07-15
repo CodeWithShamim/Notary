@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Notary">
   <defs>
     <radialGradient id="seal" cx="35%" cy="30%" r="80%">
-      <stop offset="0%" stop-color="#f4c964"/>
-      <stop offset="100%" stop-color="#8a6d33"/>
+      <stop offset="0%" stop-color="#7be3b1"/>
+      <stop offset="100%" stop-color="#3e8f6c"/>
     </radialGradient>
   </defs>
   <circle cx="16" cy="16" r="16" fill="url(#seal)"/>
-  <g transform="translate(4 4)" fill="none" stroke="#0e0e12" stroke-width="1.8"
+  <g transform="translate(4 4)" fill="none" stroke="#070b0a" stroke-width="1.8"
      stroke-linecap="round" stroke-linejoin="round">
     <path d="M12 3v18M7 21h10"/>
     <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>

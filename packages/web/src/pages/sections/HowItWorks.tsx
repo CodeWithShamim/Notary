@@ -6,7 +6,7 @@ export function HowItWorks() {
       <Reveal from="up">
         <div className="lp-head">
           <span className="lp-kicker">how it works</span>
-          <h2 className="lp-h2">Three steps, zero trust.</h2>
+          <h2 className="lp-h2">Three steps, <em>zero</em> trust.</h2>
           <p className="lp-lede">
             You never hand your money to a person. The agent takes custody, watches the deal, and
             settles it itself - you just say what happened.

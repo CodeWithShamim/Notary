@@ -16,7 +16,7 @@ export function Features() {
       <Reveal from="up">
         <div className="lp-head">
           <span className="lp-kicker">why notary</span>
-          <h2 className="lp-h2">An escrow you don't have to trust.</h2>
+          <h2 className="lp-h2">An escrow you don't have to <em>trust</em>.</h2>
           <p className="lp-lede">
             No custodian, no admin with a kill switch, no waiting on support. Just an autonomous agent
             that holds the funds and settles the deal on-chain.
